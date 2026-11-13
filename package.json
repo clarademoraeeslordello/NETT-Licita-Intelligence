@@ -1,0 +1,36 @@
+{
+  "name": "analisador-inteligente-editais",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Analisador Inteligente de Editais — análise de licitações em PDF com IA, extração estruturada e relatório executivo em PDF.",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "node scripts/test-unit.mjs",
+    "test:routes": "node scripts/verify-routes.mjs",
+    "test:e2e": "node scripts/test-e2e.mjs",
+    "test:css": "node scripts/audit-css.mjs",
+    "verify": "node scripts/verify-pipeline.mjs",
+    "test": "npm run typecheck && npm run test:unit && npm run test:routes && npm run test:css"
+  },
+  "dependencies": {
+    "next": "^15.5.25",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "unpdf": "^1.8.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=20.11"
+  }
+}

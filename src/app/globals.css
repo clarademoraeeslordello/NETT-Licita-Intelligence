@@ -1,0 +1,247 @@
+@import 'tailwindcss';
+
+/* ------------------------------------------------------------------ */
+/* Design tokens — sistema visual do produto                           */
+/* ------------------------------------------------------------------ */
+@theme {
+  /*
+   * Tipografia: usamos a pilha nativa do sistema (SF Pro no macOS, Segoe UI no
+   * Windows, Roboto/Noto no Linux/Android). Ela é carregada instantaneamente,
+   * não gera requisição de rede nem bloqueio de renderização, e mantém a
+   * aparência consistente entre as plataformas — sem depender de fontes
+   * externas que podem falhar offline.
+   */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI Variable Display', 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'SFMono-Regular', Menlo, Consolas,
+    'Liberation Mono', monospace;
+  --font-display: var(--font-sans);
+
+  --color-ink-50: #f6f8fb;
+  --color-ink-100: #eef2f8;
+  --color-ink-200: #dee5ef;
+  --color-ink-300: #c3cedd;
+  /* ink-400: escurecido para atender contraste AA em textos de 12 a 14px. */
+  --color-ink-400: #64748b;
+  --color-ink-500: #526074;
+  --color-ink-600: #43536b;
+  --color-ink-700: #334155;
+  --color-ink-800: #1e293b;
+  --color-ink-900: #0f172a;
+  --color-ink-950: #080d18;
+
+  --color-brand-50: #eef4ff;
+  --color-brand-100: #dbe6ff;
+  --color-brand-200: #bfd3ff;
+  --color-brand-300: #93b4ff;
+  --color-brand-400: #5f8bff;
+  --color-brand-500: #3b66f6;
+  --color-brand-600: #2748e3;
+  --color-brand-700: #2038b8;
+  --color-brand-800: #1f3393;
+  --color-brand-900: #1e2f74;
+
+  --color-accent-400: #38d6c4;
+  --color-accent-500: #14b8a6;
+  --color-accent-600: #0d9488;
+
+  --color-warn-100: #fef3c7;
+  --color-warn-500: #f59e0b;
+  --color-warn-700: #b45309;
+
+  --color-danger-100: #fee4e2;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b42318;
+
+  --color-ok-100: #d1fadf;
+  --color-ok-500: #12b76a;
+  --color-ok-700: #067647;
+
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
+  --radius-3xl: 1.5rem;
+
+  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -8px rgb(15 23 42 / 0.12);
+  --shadow-lift: 0 2px 4px rgb(15 23 42 / 0.05), 0 24px 48px -16px rgb(15 23 42 / 0.22);
+  --shadow-ring: 0 0 0 1px rgb(15 23 42 / 0.06);
+
+  --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-fade-in: fade-in 0.4s ease-out both;
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-pulse-ring: pulse-ring 2s ease-out infinite;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgb(59 102 246 / 0.35);
+  }
+  70% {
+    box-shadow: 0 0 0 14px rgb(59 102 246 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(59 102 246 / 0);
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                */
+/* ------------------------------------------------------------------ */
+@layer base {
+  * {
+    border-color: var(--color-ink-200);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-ink-50);
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: var(--color-brand-200);
+    color: var(--color-brand-900);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+
+    html {
+      scroll-behavior: auto;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Utilitários                                                         */
+/* ------------------------------------------------------------------ */
+@utility glass {
+  background: color-mix(in oklab, white 72%, transparent);
+  backdrop-filter: saturate(180%) blur(14px);
+}
+
+@utility grid-bg {
+  background-image:
+    linear-gradient(to right, rgb(15 23 42 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(15 23 42 / 0.045) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+@utility skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-ink-100) 25%,
+    var(--color-ink-200) 37%,
+    var(--color-ink-100) 63%
+  );
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* Scrollbar discreta */
+@layer utilities {
+  .scrollbar-slim::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-slim::-webkit-scrollbar-thumb {
+    background: var(--color-ink-300);
+    border-radius: 999px;
+  }
+  .scrollbar-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Impressão do relatório na web                                       */
+/* ------------------------------------------------------------------ */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+  }
+  .print-block {
+    break-inside: avoid;
+  }
+  @page {
+    size: A4;
+    margin: 14mm;
+  }
+}
