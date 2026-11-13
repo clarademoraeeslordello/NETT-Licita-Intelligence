@@ -49,7 +49,7 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | T-304 | `HumanReview` API + regras de `reviewStatus` | T-101, T-103 | bloqueada |
 | T-305 | Aderência no servidor (`match.score`) a partir de `aderencia.ts` + capacidades | T-101 | bloqueada |
 | T-306 | Relatório PDF no worker (ADR-014) | T-105 | bloqueada |
-| T-307 | Testes de prompt injection com PDFs adversariais | T-301 | pronta [livre] |
+| T-307 | Testes de prompt injection com PDFs adversariais | T-301 | em revisão (`src/server/analysis/fit`) |
 
 ## Fase 4 — Frontend e produto (agente 04)
 
