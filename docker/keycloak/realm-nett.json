@@ -1,0 +1,98 @@
+{
+  "realm": "nett",
+  "enabled": true,
+  "displayName": "NETT Licita Intelligence (local)",
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "permanentLockout": false,
+  "passwordPolicy": "length(12) and notUsername",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 36000,
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "pt-BR"
+  ],
+  "defaultLocale": "pt-BR",
+  "roles": {
+    "realm": [
+      {
+        "name": "nett_admin",
+        "description": "Administração da plataforma"
+      },
+      {
+        "name": "nett_consultant",
+        "description": "Consultor Nett"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "nett-licita-web",
+      "name": "NETT Licita Intelligence",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "local-dev-client-secret",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:3000/*"
+      ],
+      "webOrigins": [
+        "http://localhost:3000"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:3000/*"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@nett.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Admin",
+      "lastName": "Fictício",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin_local_123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-nett",
+        "nett_admin"
+      ]
+    },
+    {
+      "username": "consultor",
+      "email": "consultor@nett.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Consultor",
+      "lastName": "Fictício",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "consultor_local_123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "default-roles-nett",
+        "nett_consultant"
+      ]
+    }
+  ]
+}

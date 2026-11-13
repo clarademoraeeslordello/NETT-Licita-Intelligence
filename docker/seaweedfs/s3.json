@@ -1,0 +1,9 @@
+{
+  "identities": [
+    {
+      "name": "nett_local",
+      "credentials": [{ "accessKey": "nett_local", "secretKey": "nett_local_secret" }],
+      "actions": ["Admin", "Read", "Write", "List", "Tagging"]
+    }
+  ]
+}

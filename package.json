@@ -18,7 +18,10 @@
     "test:db": "tsx --test src/server/db/db.integration.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:bootstrap": "tsx scripts/db/bootstrap.ts",
-    "db:migrate": "tsx scripts/db/migrate.ts"
+    "db:migrate": "tsx scripts/db/migrate.ts",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "db:setup": "npm run db:bootstrap && npm run db:migrate"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.3",

@@ -61,6 +61,15 @@ Quem pode propor: qualquer agente (via PR neste arquivo). Quem aceita: agente 01
 - **Decisão:** Vitest (unidade e integração com Postgres real em container), Playwright (E2E). Scripts Node herdados continuam até serem portados. CI GitHub Actions: `typecheck`, `lint`, `test`, `build` em toda PR para `main`.
 - **Impacto:** branch protection exige CI verde + aprovação (configuração humana).
 
+### ADR-012a — CI somente em alterações de alto impacto · `aceita` (2026-11-13, pedido da responsável)
+- **Decisão:** o workflow roda apenas em PR para `main` que toque contratos, banco/migrations, auth, filas/worker, dependências, configuração raiz, infraestrutura local ou o próprio CI; e manualmente (`workflow_dispatch`, com `next build` opcional). Mudanças só de UI ou documentação não disparam CI.
+- **Compensação:** PRs fora dessas áreas trazem evidência local (comandos + saída) no template; o agente 01 pode disparar o CI manualmente quando julgar necessário.
+- **Impacto:** branch protection não deve exigir o check como obrigatório em toda PR (ele não roda em todas); exigir aprovação do agente 01.
+
+### ADR-015 — Object Storage local com SeaweedFS · `aceita`
+- **Contexto:** imagens públicas do MinIO deixaram de estar disponíveis (Docker Hub e quay negaram o pull em 2026-11-13).
+- **Decisão:** SeaweedFS (`chrislusf/seaweedfs:3.97`, Apache-2.0) com S3 API e credencial estática, só no ambiente local. Produção segue ADR-007 (bucket S3 do Railway). Código usa apenas a API S3 padrão (`forcePathStyle`).
+
 ### ADR-013 — Gerenciador de pacotes: npm · `aceita`
 - **Decisão:** manter npm + `package-lock.json` herdados. Node 24 LTS (`engines`).
 - **Alternativa:** pnpm (padrão em outro projeto Nett) — troca gera churn de lockfile sem benefício imediato.

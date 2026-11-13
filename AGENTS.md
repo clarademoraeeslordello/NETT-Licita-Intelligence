@@ -41,7 +41,7 @@ Proibido a qualquer agente:
 - [ ] Compatível com `CONTRACTS.md` (tipos importados de `src/contracts`, não redefinidos).
 - [ ] Segurança: authz por empresa (tenant) em toda leitura/escrita; entrada validada com Zod; sem segredo em log; sem SSRF em URLs externas.
 - [ ] Persistência: nada de negócio em memória ou `localStorage`; migrations reversíveis ou com plano de rollback.
-- [ ] Testes: novos testes cobrem o comportamento; suíte roda verde no CI (evidência no PR).
+- [ ] Testes: novos testes cobrem o comportamento; evidência no PR (CI quando a PR toca área de alto impacto — ADR-012a; senão saída local).
 - [ ] Impacto: módulos afetados listados; contratos de outros agentes intactos.
 - [ ] Duplicação: não reimplementa algo já existente em outro módulo.
 - [ ] Paleta e acessibilidade (para UI).
@@ -50,7 +50,7 @@ Proibido a qualquer agente:
 
 - Contratos v1.0.0 (`CONTRACTS.md`) e ADR-001 a ADR-014: **aprovados em 2026-11-13**. Agentes 02–04 podem iniciar tarefas `pronta`; as que dependem de schema aguardam T-101.
 - Pendentes humanos: custos Railway/Keycloak (P-05) e provedor de IA (P-04) — T-007.
-- Branch protection na `main` e CI: **pendentes** (configuração humana no GitHub).
+- CI: `.github/workflows/ci.yml`, só em alto impacto ou manual (ADR-012a). Branch protection na `main`: **pendente** (configuração humana).
 
 ---
 

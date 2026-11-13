@@ -1,0 +1,61 @@
+# T-102 — infraestrutura LOCAL de desenvolvimento. Credenciais fictícias; nunca usar fora da máquina local.
+# Padrão: Keycloak + Object Storage S3 (SeaweedFS). Usa o seu PostgreSQL 16 já instalado.
+# Sem Postgres local? `docker compose --profile postgres up -d` sobe um na porta 5432.
+name: nett-licita
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4.2
+    command: ["start-dev", "--import-realm", "--http-port=8180"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin_local
+      KC_HEALTH_ENABLED: "true"
+    ports: ["127.0.0.1:8180:8180"]
+    volumes:
+      - ./docker/keycloak/realm-nett.json:/opt/keycloak/data/import/realm-nett.json:ro
+      - keycloak-data:/opt/keycloak/data
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q UP <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+
+  storage:
+    image: chrislusf/seaweedfs:3.97
+    command: ["server", "-dir=/data", "-ip=storage", "-ip.bind=0.0.0.0", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json"]
+    ports: ["127.0.0.1:8333:8333"]
+    volumes:
+      - ./docker/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
+      - storage-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9333/cluster/status"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  storage-init:
+    image: chrislusf/seaweedfs:3.97
+    depends_on:
+      storage: { condition: service_healthy }
+    entrypoint: ["/bin/sh", "-c", "sleep 3; echo 's3.bucket.create -name nett-licita' | weed shell -master=storage:9333 | grep -v 'already exists' || true"]
+    restart: "no"
+
+  postgres:
+    profiles: ["postgres"]
+    image: postgres:16.10-alpine
+    environment:
+      POSTGRES_PASSWORD: postgres_local
+    ports: ["127.0.0.1:5432:5432"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  keycloak-data:
+  storage-data:
+  postgres-data:
