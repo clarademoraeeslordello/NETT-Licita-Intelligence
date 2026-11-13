@@ -423,7 +423,7 @@ export function AnalyzeWorkspace({
           <div
             role="status"
             aria-live="polite"
-            className="flex flex-wrap items-center gap-3 rounded-2xl border border-ok-100 bg-ok-100/40 px-5 py-4 text-sm text-ok-700"
+            className="flex flex-wrap items-center gap-3 rounded-2xl border border-nett-gold/25 bg-nett-gold/8 px-5 py-4 text-sm text-nett-gold-light"
           >
             <IconCheckCircle size={20} />
             <span>
@@ -434,7 +434,7 @@ export function AnalyzeWorkspace({
             {resultJobId ? (
               <Link
                 href={`/analise/${resultJobId}`}
-                className="rounded-xl bg-ok-700 px-4 py-2 text-xs font-semibold text-white transition hover:bg-ok-700/90"
+                className="rounded-xl bg-nett-gold-light px-4 py-2 text-xs font-semibold text-nett-black transition hover:bg-nett-gold-light/90"
               >
                 Abrir o relatório agora
               </Link>
@@ -447,25 +447,25 @@ export function AnalyzeWorkspace({
             <button
               type="button"
               onClick={cancel}
-              className="rounded-xl border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-600 transition hover:border-ink-300 hover:text-ink-900"
+              className="rounded-xl border border-nett-text-muted/15 bg-nett-surface px-4 py-2 text-sm font-medium text-nett-text transition hover:border-nett-text-muted/30 hover:text-nett-text"
             >
               Cancelar análise
             </button>
-            <p className="text-xs text-ink-500" role="status" aria-live="polite">
+            <p className="text-xs text-nett-text-muted" role="status" aria-live="polite">
               Progresso: {Math.round(progress)}%
             </p>
           </div>
         ) : null}
 
         {phase === 'error' ? null : (
-          <div className="flex flex-wrap items-center gap-3 text-xs text-ink-500">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-nett-text-muted">
             <span className="inline-flex items-center gap-1.5">
               <IconLock size={14} /> documento processado apenas no servidor
             </span>
             {Object.entries(meta).map(([key, value]) => (
-              <span key={key} className="rounded-full bg-white px-3 py-1 shadow-ring">
+              <span key={key} className="rounded-full bg-nett-surface px-3 py-1 shadow-ring">
                 {META_LABEL[key] ?? key}:{' '}
-                <strong className="font-medium text-ink-700">
+                <strong className="font-medium text-nett-text">
                   {typeof value === 'number' ? value.toLocaleString('pt-BR') : value}
                 </strong>
               </span>
@@ -477,16 +477,16 @@ export function AnalyzeWorkspace({
   }
 
   return (
-    <div id="enviar-edital" className="scroll-mt-24 rounded-3xl border border-ink-200 bg-white p-6 shadow-lift sm:p-8">
+    <div id="enviar-edital" className="scroll-mt-24 rounded-3xl border border-nett-text-muted/15 bg-nett-surface p-6 shadow-lift sm:p-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-ink-900">Envie o edital</h2>
-          <p className="mt-0.5 text-sm text-ink-500">
+          <h2 className="text-lg font-semibold text-nett-text">Envie o edital</h2>
+          <p className="mt-0.5 text-sm text-nett-text-muted">
             PDF com texto selecionável, até {capabilities.limits.maxUploadMb} MB e {capabilities.limits.maxPages}{' '}
             páginas.
           </p>
           {cota?.ia && cota.limite ? (
-            <p className={`mt-1 text-xs font-medium ${cota.restantes ? 'text-ink-600' : 'text-warn-700'}`}>
+            <p className={`mt-1 text-xs font-medium ${cota.restantes ? 'text-nett-text' : 'text-nett-gold-light'}`}>
               {cota.restantes
                 ? `Você tem ${cota.restantes} de ${cota.limite} análises com IA disponíveis · a cota renova a cada ${Math.round((cota.janelaHoras ?? 72) / 24)} dias`
                 : `Suas ${cota.limite} análises com IA foram usadas${
@@ -499,7 +499,7 @@ export function AnalyzeWorkspace({
         </div>
         <span
           className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-medium ${
-            aiOn ? 'bg-brand-50 text-brand-700' : 'bg-warn-100/60 text-warn-700'
+            aiOn ? 'bg-nett-gold/10 text-nett-gold-light' : 'bg-nett-gold-dark/18 text-nett-gold-light'
           }`}
           title={
             aiOn
@@ -542,7 +542,7 @@ export function AnalyzeWorkspace({
         tabIndex={0}
         aria-label="Selecionar o arquivo PDF do edital"
         className={`mt-6 cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition ${
-          dragging ? 'border-brand-400 bg-brand-50/60' : 'border-ink-200 bg-ink-50/60'
+          dragging ? 'border-nett-gold bg-nett-gold/6' : 'border-nett-text-muted/15 bg-nett-black/60'
         }`}
       >
         <input
@@ -562,12 +562,12 @@ export function AnalyzeWorkspace({
 
         {file ? (
           <div className="flex flex-col items-center gap-3">
-            <span className="flex size-12 items-center justify-center rounded-2xl bg-white text-brand-600 shadow-soft">
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-nett-surface text-nett-gold shadow-soft">
               <IconDocument size={24} />
             </span>
             <div>
-              <p className="font-medium text-ink-900">{file.name}</p>
-              <p className="text-sm text-ink-500">
+              <p className="font-medium text-nett-text">{file.name}</p>
+              <p className="text-sm text-nett-text-muted">
                 {formatBytes(file.size)} · pronto para análise
               </p>
             </div>
@@ -575,7 +575,7 @@ export function AnalyzeWorkspace({
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="rounded-xl border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-700 transition hover:border-ink-300 hover:bg-ink-50"
+                className="rounded-xl border border-nett-text-muted/15 bg-nett-surface px-4 py-2 text-sm font-medium text-nett-text transition hover:border-nett-text-muted/30 hover:bg-nett-black"
               >
                 Trocar arquivo
               </button>
@@ -586,7 +586,7 @@ export function AnalyzeWorkspace({
                   setError(null);
                   if (inputRef.current) inputRef.current.value = '';
                 }}
-                className="rounded-xl px-3 py-2 text-sm text-ink-500 transition hover:text-ink-800"
+                className="rounded-xl px-3 py-2 text-sm text-nett-text-muted transition hover:text-nett-text"
               >
                 Remover
               </button>
@@ -594,21 +594,21 @@ export function AnalyzeWorkspace({
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3">
-            <span className="flex size-12 items-center justify-center rounded-2xl bg-white text-brand-600 shadow-soft">
+            <span className="flex size-12 items-center justify-center rounded-2xl bg-nett-surface text-nett-gold shadow-soft">
               <IconUpload size={24} />
             </span>
             <div>
-              <p className="font-medium text-ink-900">Arraste o PDF aqui</p>
-              <p className="text-sm text-ink-500">ou clique para selecionar no seu computador</p>
+              <p className="font-medium text-nett-text">Arraste o PDF aqui</p>
+              <p className="text-sm text-nett-text-muted">ou clique para selecionar no seu computador</p>
             </div>
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="rounded-xl border border-ink-200 bg-white px-4 py-2 text-sm font-medium text-ink-700 transition hover:border-ink-300 hover:bg-ink-50"
+              className="rounded-xl border border-nett-text-muted/15 bg-nett-surface px-4 py-2 text-sm font-medium text-nett-text transition hover:border-nett-text-muted/30 hover:bg-nett-black"
             >
               Selecionar arquivo
             </button>
-            <p className="text-xs text-ink-500">Formato aceito: PDF · máx. {capabilities.limits.maxUploadMb} MB</p>
+            <p className="text-xs text-nett-text-muted">Formato aceito: PDF · máx. {capabilities.limits.maxUploadMb} MB</p>
           </div>
         )}
       </div>
@@ -617,14 +617,14 @@ export function AnalyzeWorkspace({
         <div
           role="alert"
           aria-live="assertive"
-          className="mt-5 flex items-start gap-3 rounded-2xl border border-danger-100 bg-danger-100/40 p-4"
+          className="mt-5 flex items-start gap-3 rounded-2xl border border-nett-text/20 bg-nett-text/4 p-4"
         >
-          <span className="mt-0.5 text-danger-600">
+          <span className="mt-0.5 text-nett-text">
             <IconAlert size={20} />
           </span>
           <div>
-            <p className="text-sm font-medium text-danger-700">{error.message}</p>
-            {error.hint ? <p className="mt-1 text-sm text-danger-700/80">{error.hint}</p> : null}
+            <p className="text-sm font-medium text-nett-text">{error.message}</p>
+            {error.hint ? <p className="mt-1 text-sm text-nett-text/80">{error.hint}</p> : null}
           </div>
         </div>
       ) : null}
@@ -634,7 +634,7 @@ export function AnalyzeWorkspace({
           type="button"
           disabled={!file}
           onClick={runUpload}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3.5 font-medium text-white shadow-soft transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-ink-200 disabled:text-ink-500 disabled:shadow-none sm:flex-none"
+          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-nett-gold px-5 py-3.5 font-medium text-nett-black shadow-soft transition hover:bg-nett-gold-light disabled:cursor-not-allowed disabled:bg-nett-text-muted/15 disabled:text-nett-text-muted disabled:shadow-none sm:flex-none"
         >
           <IconSparkles size={18} />
           Analisar edital
@@ -643,7 +643,7 @@ export function AnalyzeWorkspace({
         <button
           type="button"
           onClick={runDemo}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-5 py-3.5 font-medium text-ink-700 transition hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-nett-text-muted/15 bg-nett-surface px-5 py-3.5 font-medium text-nett-text transition hover:border-nett-gold hover:bg-nett-gold/10 hover:text-nett-gold-light"
         >
           <IconPlay size={16} />
           Analisar edital de demonstração
@@ -651,14 +651,14 @@ export function AnalyzeWorkspace({
 
         <a
           href="/api/demo/edital?download=1"
-          className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm text-ink-500 transition hover:text-ink-800"
+          className="inline-flex items-center justify-center gap-2 rounded-xl px-3 py-3 text-sm text-nett-text-muted transition hover:text-nett-text"
         >
           <IconDownload size={16} />
           Baixar PDF de teste
         </a>
       </div>
 
-      <p className="mt-4 text-xs leading-relaxed text-ink-500">
+      <p className="mt-4 text-xs leading-relaxed text-nett-text-muted">
         O PDF é processado no servidor e não é guardado nem publicado. O relatório fica disponível pelo link por 30
         dias.
       </p>

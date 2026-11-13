@@ -123,3 +123,78 @@ if (missing.length === 0) {
   console.log('\n  Verifique se o token existe no bloco @theme de src/app/globals.css.');
   process.exitCode = 1;
 }
+
+/* ------------------------------------------------------------------ */
+/* T-402 — Paleta NETT (CONTRACTS.md §6, ADR-009)                       */
+/* ------------------------------------------------------------------ */
+const PALETA = ['#050505', '#0D0D0D', '#111111', '#C9A227', '#F0D375', '#8A6D1A', '#ECECEC', '#AFAFAF'];
+
+/**
+ * Pendências conhecidas FORA da área do agente 04 (ver handoff
+ * 2026-11-13-agente-04-t401-t402-paleta.md). Cada entrada tem dono. O teste
+ * falha se surgir cor fora da paleta em qualquer outro arquivo e também se um
+ * arquivo listado ficar limpo (para a entrada ser removida).
+ */
+const PENDENCIAS_FORA_DA_AREA = new Map([
+  ['src/app/layout.tsx', 'agente 01 (themeColor)'],
+  ['src/app/icon.svg', 'agente 01 (favicon)'],
+  ['src/app/api/jobs/[id]/report.html/route.ts', 'agente 03 (rota legada do relatório)'],
+  ['src/lib/report/document.ts', 'agente 03 (relatório PDF/HTML)'],
+]);
+
+/** Valores internos do Tailwind v4, não escolhidos pela interface. */
+const INTERNOS_TAILWIND = new Set([
+  '#0000', // transparente nas variáveis --tw-*
+  '#fff', // valor inicial de --tw-ring-offset-color (não usamos ring-offset)
+  'rgb(from red r g b)', // sonda de @supports
+]);
+
+const COR_LITERAL = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|oklch|oklab|lab|lch|hwb)\(\s*[\d.]+[^)]*\)/g;
+const ehDaPaleta = (valor) => PALETA.includes(valor.toUpperCase());
+
+function arquivosVisuais(dir, lista = []) {
+  for (const entry of readdirSync(dir)) {
+    const full = join(dir, entry);
+    if (statSync(full).isDirectory()) {
+      if (!full.includes(join('lib', 'fixtures'))) arquivosVisuais(full, lista);
+    } else if (['.ts', '.tsx', '.css', '.svg', '.html'].includes(extname(full))) lista.push(full);
+  }
+  return lista;
+}
+
+const violacoes = [];
+const pendentesLimpos = new Set(PENDENCIAS_FORA_DA_AREA.keys());
+for (const full of arquivosVisuais(join(ROOT, 'src'))) {
+  const rel = full.slice(ROOT.length + 1).split('\\').join('/');
+  const code = readFileSync(full, 'utf8');
+  const fora = [];
+  for (const m of code.matchAll(COR_LITERAL)) {
+    const valor = m[0];
+    // Âncoras de página (#conteudo) não são cores.
+    if (valor.startsWith('#') && !/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(valor)) continue;
+    if (valor.startsWith('#') && ehDaPaleta(valor)) continue;
+    fora.push(valor);
+  }
+  // Classes de cor padrão do Tailwind (a paleta padrão é removida em @theme).
+  for (const m of code.matchAll(/\b(?:bg|text|border|ring|from|to|via|fill|stroke|divide|outline|accent|decoration|shadow|caret|placeholder)-(?:white|black|(?:red|green|blue|amber|yellow|emerald|slate|gray|sky|teal|indigo|violet|rose|orange|lime|cyan|purple|pink|zinc|neutral|stone|fuchsia)-\d{2,3})\b/g)) {
+    fora.push(m[0]);
+  }
+  if (PENDENCIAS_FORA_DA_AREA.has(rel)) {
+    if (fora.length) pendentesLimpos.delete(rel);
+    continue;
+  }
+  for (const valor of fora) violacoes.push(`${rel}: ${valor}`);
+}
+
+const cssFora = [...new Set(output.match(COR_LITERAL) ?? [])].filter((v) => !(v.startsWith('#') && ehDaPaleta(v)) && !INTERNOS_TAILWIND.has(v));
+
+console.log('\nAuditoria da paleta NETT (8 cores)\n');
+if (violacoes.length === 0 && cssFora.length === 0 && pendentesLimpos.size === 0) {
+  console.log('  ✓ código-fonte e CSS gerado usam somente a paleta oficial');
+  console.log(`  · pendências fora da área do agente 04: ${PENDENCIAS_FORA_DA_AREA.size} arquivo(s) (ver handoff)`);
+} else {
+  for (const v of violacoes) console.log(`  ✗ cor fora da paleta: ${v}`);
+  for (const v of cssFora) console.log(`  ✗ cor fora da paleta no CSS gerado: ${v}`);
+  for (const f of pendentesLimpos) console.log(`  ✗ ${f} já está na paleta: remova-o de PENDENCIAS_FORA_DA_AREA`);
+  process.exitCode = 1;
+}

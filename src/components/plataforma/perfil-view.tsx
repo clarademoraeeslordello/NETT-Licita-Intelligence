@@ -38,13 +38,13 @@ function CampoTags({
     if (novos.length) onChange([...valores, ...novos].slice(0, maximo ?? Infinity));
     setTexto('');
   };
-  const chip = tom === 'brand' ? 'bg-brand-50 text-brand-800' : 'bg-danger-100/60 text-danger-700';
+  const chip = tom === 'brand' ? 'bg-nett-gold/10 text-nett-gold-light' : 'bg-nett-text/6 text-nett-text';
 
   return (
     <div>
-      <p className="text-sm font-medium text-ink-800">{rotulo}</p>
-      <p className="mt-0.5 text-xs text-ink-500">{ajuda}</p>
-      <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-ink-200 p-2 focus-within:border-brand-300">
+      <p className="text-sm font-medium text-nett-text">{rotulo}</p>
+      <p className="mt-0.5 text-xs text-nett-text-muted">{ajuda}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-2 rounded-xl border border-nett-text-muted/15 p-2 focus-within:border-nett-gold">
         {valores.map((valor) => (
           <span key={valor} className={`inline-flex items-center gap-1 rounded-lg py-1 pl-2.5 pr-1 text-sm ${chip}`}>
             {valor}
@@ -114,7 +114,7 @@ export function PerfilView() {
         acoes={
           <>
             {salvo ? (
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-ok-700" role="status">
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-nett-gold-light" role="status">
                 <IconCheckCircle size={16} /> Perfil salvo
               </span>
             ) : null}
@@ -129,7 +129,7 @@ export function PerfilView() {
       />
 
       {ws.inicio === 'zero' && ws.pipeline.length === 0 ? (
-        <p className="mb-5 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm text-brand-800">
+        <p className="mb-5 rounded-2xl border border-nett-gold/40 bg-nett-gold/10 px-4 py-3 text-sm text-nett-gold-light">
           Pronto, começamos do zero. Diga o que a sua empresa vende e onde atua, salve e abra o <strong>Radar</strong>: os
           editais abertos no PNCP serão pontuados para o seu perfil.
         </p>
@@ -139,33 +139,33 @@ export function PerfilView() {
         <Painel titulo="Empresa">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block sm:col-span-2">
-              <span className="text-sm font-medium text-ink-800">Razão social</span>
-              <input value={form.empresa} onChange={(event) => setForm({ ...form, empresa: event.target.value })} className="mt-1.5 w-full rounded-xl border border-ink-200 px-3 py-2.5 text-sm" />
+              <span className="text-sm font-medium text-nett-text">Razão social</span>
+              <input value={form.empresa} onChange={(event) => setForm({ ...form, empresa: event.target.value })} className="mt-1.5 w-full rounded-xl border border-nett-text-muted/15 px-3 py-2.5 text-sm" />
             </label>
             <label className="block">
-              <span className="text-sm font-medium text-ink-800">CNPJ</span>
+              <span className="text-sm font-medium text-nett-text">CNPJ</span>
               <input
                 value={form.cnpj}
                 onChange={(event) => setForm({ ...form, cnpj: event.target.value.replace(/[^\d./-]/g, '').slice(0, 18) })}
                 placeholder="00.000.000/0000-00"
-                className="mt-1.5 w-full rounded-xl border border-ink-200 px-3 py-2.5 font-mono text-sm"
+                className="mt-1.5 w-full rounded-xl border border-nett-text-muted/15 px-3 py-2.5 font-mono text-sm"
               />
             </label>
             <label className="block">
-              <span className="text-sm font-medium text-ink-800">Porte</span>
-              <select value={form.porte} onChange={(event) => setForm({ ...form, porte: event.target.value as Perfil['porte'] })} className="mt-1.5 w-full rounded-xl border border-ink-200 bg-white px-3 py-2.5 text-sm">
+              <span className="text-sm font-medium text-nett-text">Porte</span>
+              <select value={form.porte} onChange={(event) => setForm({ ...form, porte: event.target.value as Perfil['porte'] })} className="mt-1.5 w-full rounded-xl border border-nett-text-muted/15 bg-nett-surface px-3 py-2.5 text-sm">
                 <option value="ME">Microempresa (ME)</option>
                 <option value="EPP">Empresa de Pequeno Porte (EPP)</option>
                 <option value="Demais">Demais</option>
               </select>
             </label>
             <label className="block">
-              <span className="text-sm font-medium text-ink-800">Ticket mínimo (R$)</span>
-              <input inputMode="numeric" value={form.valorMin ?? ''} onChange={(event) => setForm({ ...form, valorMin: numero(event.target.value) })} placeholder="Sem mínimo" className="mt-1.5 w-full rounded-xl border border-ink-200 px-3 py-2.5 font-mono text-sm" />
+              <span className="text-sm font-medium text-nett-text">Ticket mínimo (R$)</span>
+              <input inputMode="numeric" value={form.valorMin ?? ''} onChange={(event) => setForm({ ...form, valorMin: numero(event.target.value) })} placeholder="Sem mínimo" className="mt-1.5 w-full rounded-xl border border-nett-text-muted/15 px-3 py-2.5 font-mono text-sm" />
             </label>
             <label className="block">
-              <span className="text-sm font-medium text-ink-800">Capacidade máxima (R$)</span>
-              <input inputMode="numeric" value={form.valorMax ?? ''} onChange={(event) => setForm({ ...form, valorMax: numero(event.target.value) })} placeholder="Sem limite" className="mt-1.5 w-full rounded-xl border border-ink-200 px-3 py-2.5 font-mono text-sm" />
+              <span className="text-sm font-medium text-nett-text">Capacidade máxima (R$)</span>
+              <input inputMode="numeric" value={form.valorMax ?? ''} onChange={(event) => setForm({ ...form, valorMax: numero(event.target.value) })} placeholder="Sem limite" className="mt-1.5 w-full rounded-xl border border-nett-text-muted/15 px-3 py-2.5 font-mono text-sm" />
             </label>
           </div>
         </Painel>
@@ -194,12 +194,12 @@ export function PerfilView() {
         <Painel
           titulo="Área de atuação"
           acao={
-            <button type="button" onClick={() => setForm({ ...form, ufs: [] })} className="text-xs font-medium text-brand-700">
+            <button type="button" onClick={() => setForm({ ...form, ufs: [] })} className="text-xs font-medium text-nett-gold-light">
               Todo o Brasil
             </button>
           }
         >
-          <p className="mb-3 text-xs text-ink-500">{form.ufs.length ? `${form.ufs.length} UF(s) selecionada(s)` : 'Nenhuma UF selecionada: o radar busca no país inteiro.'}</p>
+          <p className="mb-3 text-xs text-nett-text-muted">{form.ufs.length ? `${form.ufs.length} UF(s) selecionada(s)` : 'Nenhuma UF selecionada: o radar busca no país inteiro.'}</p>
           <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-9">
             {UFS.map((uf) => {
               const ativo = form.ufs.includes(uf);
@@ -209,7 +209,7 @@ export function PerfilView() {
                   type="button"
                   aria-pressed={ativo}
                   onClick={() => setForm({ ...form, ufs: alternar(form.ufs, uf) })}
-                  className={`rounded-lg py-2 font-mono text-xs font-medium transition ${ativo ? 'bg-brand-600 text-white shadow-soft' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}`}
+                  className={`rounded-lg py-2 font-mono text-xs font-medium transition ${ativo ? 'bg-nett-gold text-nett-black shadow-soft' : 'bg-nett-raised text-nett-text hover:bg-nett-text-muted/15'}`}
                 >
                   {uf}
                 </button>
@@ -223,21 +223,21 @@ export function PerfilView() {
             {MODALIDADES_OFERTADAS.map((id) => {
               const ativo = form.modalidades.includes(id);
               return (
-                <label key={id} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition ${ativo ? 'border-brand-300 bg-brand-50/60' : 'border-ink-200 hover:bg-ink-50'}`}>
-                  <input type="checkbox" checked={ativo} onChange={() => setForm({ ...form, modalidades: alternar(form.modalidades, id) })} className="size-4 accent-brand-600" />
+                <label key={id} className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2.5 text-sm transition ${ativo ? 'border-nett-gold bg-nett-gold/6' : 'border-nett-text-muted/15 hover:bg-nett-black'}`}>
+                  <input type="checkbox" checked={ativo} onChange={() => setForm({ ...form, modalidades: alternar(form.modalidades, id) })} className="size-4 accent-nett-gold" />
                   {MODALIDADES[id]}
                 </label>
               );
             })}
           </div>
-          <p className="mt-3 text-xs text-ink-500">Sem nenhuma marcada, o radar considera todas as modalidades.</p>
+          <p className="mt-3 text-xs text-nett-text-muted">Sem nenhuma marcada, o radar considera todas as modalidades.</p>
         </Painel>
       </div>
 
-      <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-danger-100 bg-white p-5 sm:flex-row sm:items-center">
+      <div className="mt-8 flex flex-col gap-3 rounded-2xl border border-nett-text/20 bg-nett-surface p-5 sm:flex-row sm:items-center">
         <div className="flex-1">
-          <p className="text-sm font-medium text-ink-900">Restaurar dados de demonstração</p>
-          <p className="text-xs text-ink-500">Apaga pipeline, documentos e perfil deste navegador e recria o cenário de exemplo.</p>
+          <p className="text-sm font-medium text-nett-text">Restaurar dados de demonstração</p>
+          <p className="text-xs text-nett-text-muted">Apaga pipeline, documentos e perfil deste navegador e recria o cenário de exemplo.</p>
         </div>
         {confirmarReset ? (
           <div className="flex gap-2">
@@ -250,7 +250,7 @@ export function PerfilView() {
                 reiniciar();
                 setConfirmarReset(false);
               }}
-              className="inline-flex items-center gap-2 rounded-xl bg-danger-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-danger-700"
+              className="inline-flex items-center gap-2 rounded-xl bg-nett-text px-4 py-2.5 text-sm font-medium text-nett-black hover:bg-nett-gold-light"
             >
               Sim, restaurar
             </button>

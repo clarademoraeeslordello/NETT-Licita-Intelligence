@@ -17,9 +17,9 @@ export type EventoAgenda = {
 };
 
 export const TIPO_EVENTO: Record<TipoEvento, { rotulo: string; ponto: string; chip: string }> = {
-  encerramento: { rotulo: 'Fim das propostas', ponto: 'bg-danger-500', chip: 'bg-danger-100 text-danger-700' },
-  abertura: { rotulo: 'Início das propostas', ponto: 'bg-brand-500', chip: 'bg-brand-50 text-brand-700' },
-  documento: { rotulo: 'Vencimento de documento', ponto: 'bg-warn-500', chip: 'bg-warn-100 text-warn-700' },
+  encerramento: { rotulo: 'Fim das propostas', ponto: 'bg-nett-text', chip: 'bg-nett-text/10 text-nett-text' },
+  abertura: { rotulo: 'Início das propostas', ponto: 'bg-nett-gold', chip: 'bg-nett-gold/10 text-nett-gold-light' },
+  documento: { rotulo: 'Vencimento de documento', ponto: 'bg-nett-gold', chip: 'bg-nett-gold-dark/30 text-nett-gold-light' },
 };
 
 /** Eventos ainda por acontecer: prazos com hora contam até o instante; os de dia inteiro, até o fim do dia. */

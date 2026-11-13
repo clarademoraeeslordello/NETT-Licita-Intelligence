@@ -71,11 +71,11 @@ export function prazoRelativo(iso: string | null | undefined, agora = Date.now()
 }
 
 export const TOM_CLASSES: Record<Tom, string> = {
-  critico: 'bg-danger-100 text-danger-700',
-  atencao: 'bg-warn-100 text-warn-700',
-  ok: 'bg-ok-100 text-ok-700',
-  passado: 'bg-ink-100 text-ink-500',
-  neutro: 'bg-ink-100 text-ink-600',
+  critico: 'bg-nett-text/10 text-nett-text',
+  atencao: 'bg-nett-gold-dark/30 text-nett-gold-light',
+  ok: 'bg-nett-gold/20 text-nett-gold-light',
+  passado: 'bg-nett-raised text-nett-text-muted',
+  neutro: 'bg-nett-raised text-nett-text',
 };
 
 export function cnpjFormatado(value: string): string {

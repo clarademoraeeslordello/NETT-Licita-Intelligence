@@ -120,11 +120,11 @@ export function PrecosView() {
           event.preventDefault();
           pesquisar(texto);
         }}
-        className="mb-3 grid gap-2 rounded-2xl border border-ink-200 bg-white p-2 shadow-soft sm:grid-cols-[1fr_auto_auto]"
+        className="mb-3 grid gap-2 rounded-2xl border border-nett-text-muted/15 bg-nett-surface p-2 shadow-soft sm:grid-cols-[1fr_auto_auto]"
       >
         <label className="relative block">
           <span className="sr-only">Item a precificar</span>
-          <IconSearch size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-ink-400" />
+          <IconSearch size={18} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-nett-text-muted" />
           <input
             value={texto}
             onChange={(event) => setTexto(event.target.value)}
@@ -137,7 +137,7 @@ export function PrecosView() {
           value={uf}
           onChange={(event) => setUf(event.target.value)}
           aria-label="Filtrar por UF"
-          className="rounded-xl border border-ink-200 bg-ink-50/60 px-3 py-2.5 text-sm text-ink-700"
+          className="rounded-xl border border-nett-text-muted/15 bg-nett-black/60 px-3 py-2.5 text-sm text-nett-text"
         >
           <option value="">Brasil inteiro</option>
           {(pronto ? ws.perfil.ufs : []).map((sigla) => (
@@ -152,13 +152,13 @@ export function PrecosView() {
       </form>
 
       <div className="mb-6 flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-ink-500">Experimente:</span>
+        <span className="text-nett-text-muted">Experimente:</span>
         {SUGESTOES.map((sugestao) => (
           <button
             key={sugestao}
             type="button"
             onClick={() => pesquisar(sugestao)}
-            className="rounded-full bg-white px-2.5 py-1 text-ink-600 shadow-ring transition hover:text-brand-700"
+            className="rounded-full bg-nett-surface px-2.5 py-1 text-nett-text shadow-ring transition hover:text-nett-gold-light"
           >
             {sugestao}
           </button>
@@ -183,25 +183,25 @@ export function PrecosView() {
           ) : null}
 
           {coletando ? (
-            <div className="mb-5 rounded-2xl border border-brand-200 bg-brand-50/60 p-4" role="status" aria-live="polite">
+            <div className="mb-5 rounded-2xl border border-nett-gold/40 bg-nett-gold/6 p-4" role="status" aria-live="polite">
               <div className="flex items-center justify-between gap-3 text-sm">
-                <p className="font-medium text-brand-800">{estado.mensagem}</p>
-                <span className="font-mono text-xs text-brand-700">{amostras.length} preço(s)</span>
+                <p className="font-medium text-nett-gold-light">{estado.mensagem}</p>
+                <span className="font-mono text-xs text-nett-gold-light">{amostras.length} preço(s)</span>
               </div>
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-brand-100">
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-nett-gold/20">
                 <div
-                  className={`h-full rounded-full bg-brand-500 transition-[width] duration-500 ${estado.total ? '' : 'w-1/4 animate-pulse'}`}
+                  className={`h-full rounded-full bg-nett-gold transition-[width] duration-500 ${estado.total ? '' : 'w-1/4 animate-pulse'}`}
                   style={estado.total ? { width: `${Math.max(6, (estado.concluido / estado.total) * 100)}%` } : undefined}
                 />
               </div>
-              <p className="mt-2 text-xs text-brand-800/70">
+              <p className="mt-2 text-xs text-nett-gold-light/70">
                 O PNCP responde item a item; os resultados aparecem conforme chegam.
               </p>
             </div>
           ) : (
-            <p className="mb-4 text-sm text-ink-500">
+            <p className="mb-4 text-sm text-nett-text-muted">
               {amostras.length} preço(s) vencedor(es) em {estado.comprasAnalisadas} licitação(ões) encerrada(s) para{' '}
-              <strong className="font-medium text-ink-800">“{estado.consulta}”</strong>
+              <strong className="font-medium text-nett-text">“{estado.consulta}”</strong>
               {estado.duracaoMs >= 500 ? ` · ${(estado.duracaoMs / 1000).toFixed(1).replace('.', ',')} s` : ''}
             </p>
           )}
@@ -253,7 +253,7 @@ function Resultado({ stats, amostras, consulta }: { stats: EstatisticaPrecos; am
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1fr_360px]">
         <Painel titulo={`Distribuição dos preços vencedores (por ${unidade})`}>
           <Histograma stats={stats} />
-          <p className="mt-4 text-xs leading-relaxed text-ink-500">
+          <p className="mt-4 text-xs leading-relaxed text-nett-text-muted">
             Mínimo {brl(stats.minimo, { centavos: true })} · máximo {brl(stats.maximo, { centavos: true })}.
             {stats.descartadasPorUnidade > 0
               ? ` ${stats.descartadasPorUnidade} amostra(s) em outras unidades ficaram fora das estatísticas, mas aparecem na tabela.`
@@ -263,21 +263,21 @@ function Resultado({ stats, amostras, consulta }: { stats: EstatisticaPrecos; am
         </Painel>
 
         <Painel titulo="Quem mais vence" semPadding>
-          <ul className="divide-y divide-ink-100">
+          <ul className="divide-y divide-nett-text-muted/10">
             {stats.fornecedores.map((fornecedor, posicao) => (
               <li key={fornecedor.documento || fornecedor.nome} className="flex items-center gap-3 px-5 py-3">
                 <span
                   className={`flex size-7 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${
-                    posicao === 0 ? 'bg-warn-100 text-warn-700' : 'bg-ink-100 text-ink-600'
+                    posicao === 0 ? 'bg-nett-gold-dark/30 text-nett-gold-light' : 'bg-nett-raised text-nett-text'
                   }`}
                 >
                   {posicao === 0 ? <IconTrophy size={15} /> : posicao + 1}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink-800" title={fornecedor.nome}>
+                  <p className="truncate text-sm font-medium text-nett-text" title={fornecedor.nome}>
                     {tituloProprio(fornecedor.nome)}
                   </p>
-                  <p className="text-xs text-ink-500">
+                  <p className="text-xs text-nett-text-muted">
                     {fornecedor.vitorias} vitória(s) · ticket {brl(fornecedor.ticketMedio)}
                     {fornecedor.documento.length === 14 ? ` · ${cnpjFormatado(fornecedor.documento)}` : ''}
                   </p>
@@ -292,7 +292,7 @@ function Resultado({ stats, amostras, consulta }: { stats: EstatisticaPrecos; am
         titulo={`Amostras (${amostras.length})`}
         semPadding
         acao={
-          <div className="flex rounded-lg bg-ink-100 p-0.5 text-xs font-medium" role="group" aria-label="Ordenar amostras">
+          <div className="flex rounded-lg bg-nett-raised p-0.5 text-xs font-medium" role="group" aria-label="Ordenar amostras">
             {(
               [
                 ['preco', 'Menor preço'],
@@ -304,7 +304,7 @@ function Resultado({ stats, amostras, consulta }: { stats: EstatisticaPrecos; am
                 type="button"
                 aria-pressed={ordem === valor}
                 onClick={() => setOrdem(valor)}
-                className={`rounded-md px-2.5 py-1 transition ${ordem === valor ? 'bg-white text-ink-900 shadow-soft' : 'text-ink-500'}`}
+                className={`rounded-md px-2.5 py-1 transition ${ordem === valor ? 'bg-nett-surface text-nett-text shadow-soft' : 'text-nett-text-muted'}`}
               >
                 {rotulo}
               </button>
@@ -315,7 +315,7 @@ function Resultado({ stats, amostras, consulta }: { stats: EstatisticaPrecos; am
         <div className="scrollbar-slim relative overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
             <caption className="sr-only">Preços vencedores de “{consulta}”</caption>
-            <thead className="bg-ink-50 text-xs text-ink-500">
+            <thead className="bg-nett-black text-xs text-nett-text-muted">
               <tr>
                 <th className="px-4 py-2.5 font-medium">Item</th>
                 <th className="px-4 py-2.5 text-right font-medium">Vencedor / un.</th>
@@ -325,38 +325,38 @@ function Resultado({ stats, amostras, consulta }: { stats: EstatisticaPrecos; am
                 <th className="px-4 py-2.5 font-medium">Órgão</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-ink-100">
+            <tbody className="divide-y divide-nett-text-muted/10">
               {tabela.map((amostra) => (
                 <tr key={amostra.id} className="align-top">
                   <td className="max-w-xs px-4 py-3">
-                    <p className="line-clamp-2 text-ink-800" title={amostra.descricao}>
+                    <p className="line-clamp-2 text-nett-text" title={amostra.descricao}>
                       {amostra.descricao}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-ink-500">
+                    <p className="mt-0.5 text-[11px] text-nett-text-muted">
                       {amostra.quantidade.toLocaleString('pt-BR')} {amostra.unidade} · {dataLonga(amostra.dataResultado)}
                     </p>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs font-semibold text-ink-900">
+                  <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs font-semibold text-nett-text">
                     {brl(amostra.valorHomologadoUnitario, { centavos: true })}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs text-ink-500">
+                  <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs text-nett-text-muted">
                     {brl(amostra.valorEstimadoUnitario, { centavos: true })}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-right font-mono text-xs">
                     {amostra.desconto === null ? '—' : `${amostra.desconto.toFixed(1).replace('.', ',')}%`}
                   </td>
                   <td className="max-w-[200px] px-4 py-3">
-                    <p className="truncate text-xs font-medium text-ink-800" title={amostra.fornecedor}>
+                    <p className="truncate text-xs font-medium text-nett-text" title={amostra.fornecedor}>
                       {tituloProprio(amostra.fornecedor)}
                     </p>
-                    {amostra.porte ? <p className="text-[11px] text-ink-500">{amostra.porte}</p> : null}
+                    {amostra.porte ? <p className="text-[11px] text-nett-text-muted">{amostra.porte}</p> : null}
                   </td>
                   <td className="max-w-[220px] px-4 py-3">
                     <a
                       href={amostra.linkPncp}
                       target="_blank"
                       rel="noreferrer"
-                      className="group/link inline-flex items-start gap-1 text-xs text-ink-600 hover:text-brand-700"
+                      className="group/link inline-flex items-start gap-1 text-xs text-nett-text hover:text-nett-gold-light"
                     >
                       <span className="line-clamp-2">
                         {tituloProprio(amostra.orgao)} · {amostra.uf}
@@ -376,10 +376,10 @@ function Resultado({ stats, amostras, consulta }: { stats: EstatisticaPrecos; am
 
 function Destaque({ rotulo, valor, detalhe, forte = false }: { rotulo: string; valor: string; detalhe: string; forte?: boolean }) {
   return (
-    <div className={`rounded-2xl border p-5 shadow-soft ${forte ? 'border-brand-600 bg-brand-600 text-white' : 'border-ink-200 bg-white'}`}>
-      <p className={`text-sm ${forte ? 'text-brand-100' : 'text-ink-500'}`}>{rotulo}</p>
-      <p className={`mt-2 font-mono text-xl font-semibold tracking-tight ${forte ? 'text-white' : 'text-ink-900'}`}>{valor}</p>
-      <p className={`mt-1 text-xs ${forte ? 'text-brand-100' : 'text-ink-500'}`}>{detalhe}</p>
+    <div className={`rounded-2xl border p-5 shadow-soft ${forte ? 'border-nett-gold bg-nett-gold text-nett-black' : 'border-nett-text-muted/15 bg-nett-surface'}`}>
+      <p className={`text-sm ${forte ? 'text-nett-gold-light' : 'text-nett-text-muted'}`}>{rotulo}</p>
+      <p className={`mt-2 font-mono text-xl font-semibold tracking-tight ${forte ? 'text-nett-text' : 'text-nett-text'}`}>{valor}</p>
+      <p className={`mt-1 text-xs ${forte ? 'text-nett-gold-light' : 'text-nett-text-muted'}`}>{detalhe}</p>
     </div>
   );
 }
@@ -405,7 +405,7 @@ function Histograma({ stats }: { stats: EstatisticaPrecos }) {
   return (
     <div className="relative">
       <svg viewBox={`0 0 ${largura} ${altura}`} className="h-auto w-full" role="img" aria-label={`Histograma de ${stats.amostras} preços vencedores, mediana ${brl(stats.mediana)}`}>
-        <line x1={margem.esq} x2={largura - margem.dir} y1={altura - margem.base} y2={altura - margem.base} stroke="#dee5ef" />
+        <line x1={margem.esq} x2={largura - margem.dir} y1={altura - margem.base} y2={altura - margem.base} stroke="#8A6D1A" />
         {stats.faixas.map((faixa, indice) => {
           const h = (faixa.quantidade / maior) * areaA;
           const x = margem.esq + indice * passo + gap / 2;
@@ -419,32 +419,32 @@ function Histograma({ stats }: { stats: EstatisticaPrecos }) {
               {faixa.quantidade > 0 ? (
                 <path
                   d={`M${x},${altura - margem.base} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${altura - margem.base} Z`}
-                  fill={ativo === indice ? '#2748e3' : '#5f8bff'}
+                  fill={ativo === indice ? '#F0D375' : '#C9A227'}
                 />
               ) : null}
             </g>
           );
         })}
-        <line x1={xMediana} x2={xMediana} y1={margem.topo - 6} y2={altura - margem.base} stroke="#0f172a" strokeWidth={1.5} strokeDasharray="4 3" />
-        <text x={xMediana} y={margem.topo - 8} textAnchor={xMediana > largura * 0.8 ? 'end' : 'middle'} className="fill-ink-700 text-[11px] font-medium">
+        <line x1={xMediana} x2={xMediana} y1={margem.topo - 6} y2={altura - margem.base} stroke="#ECECEC" strokeWidth={1.5} strokeDasharray="4 3" />
+        <text x={xMediana} y={margem.topo - 8} textAnchor={xMediana > largura * 0.8 ? 'end' : 'middle'} className="fill-nett-text text-[11px] font-medium">
           mediana {brl(stats.mediana)}
         </text>
-        <text x={margem.esq} y={altura - 8} className="fill-ink-500 text-[11px]">
+        <text x={margem.esq} y={altura - 8} className="fill-nett-text-muted text-[11px]">
           {brl(stats.minimo)}
         </text>
-        <text x={largura - margem.dir} y={altura - 8} textAnchor="end" className="fill-ink-500 text-[11px]">
+        <text x={largura - margem.dir} y={altura - 8} textAnchor="end" className="fill-nett-text-muted text-[11px]">
           {brl(stats.maximo)}
         </text>
       </svg>
       {ativo !== null ? (
         <div
-          className="pointer-events-none absolute top-0 -translate-x-1/2 rounded-lg bg-ink-900 px-2.5 py-1.5 text-xs text-white shadow-lift"
+          className="pointer-events-none absolute top-0 -translate-x-1/2 rounded-lg bg-nett-raised px-2.5 py-1.5 text-xs text-nett-text shadow-lift"
           style={{ left: `${((margem.esq + (ativo + 0.5) * passo) / largura) * 100}%` }}
         >
           <p className="font-mono">
             {brl(stats.faixas[ativo].de)} – {brl(stats.faixas[ativo].ate)}
           </p>
-          <p className="text-ink-300">{stats.faixas[ativo].quantidade} vitória(s)</p>
+          <p className="text-nett-text-muted">{stats.faixas[ativo].quantidade} vitória(s)</p>
         </div>
       ) : null}
     </div>

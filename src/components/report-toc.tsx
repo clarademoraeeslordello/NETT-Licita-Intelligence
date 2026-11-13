@@ -39,7 +39,7 @@ export function ReportToc({ entries }: { entries: TocEntry[] }) {
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-controls="toc-list"
-        className="flex w-full items-center justify-between rounded-xl border border-ink-200 bg-white px-4 py-3 text-sm font-medium text-ink-800 xl:hidden"
+        className="flex w-full items-center justify-between rounded-xl border border-nett-text-muted/15 bg-nett-surface px-4 py-3 text-sm font-medium text-nett-text xl:hidden"
       >
         <span className="inline-flex items-center gap-2">
           <IconList size={16} />
@@ -50,7 +50,7 @@ export function ReportToc({ entries }: { entries: TocEntry[] }) {
 
       <ol
         id="toc-list"
-        className={`${open ? 'block' : 'hidden'} mt-2 space-y-1 rounded-2xl border border-ink-200 bg-white p-3 xl:sticky xl:top-24 xl:block xl:border-none xl:bg-transparent xl:p-0`}
+        className={`${open ? 'block' : 'hidden'} mt-2 space-y-1 rounded-2xl border border-nett-text-muted/15 bg-nett-surface p-3 xl:sticky xl:top-24 xl:block xl:border-none xl:bg-transparent xl:p-0`}
       >
         {entries.map((entry) => {
           const isActive = active === entry.id;
@@ -61,15 +61,15 @@ export function ReportToc({ entries }: { entries: TocEntry[] }) {
                 onClick={() => setOpen(false)}
                 className={`flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm transition ${
                   isActive
-                    ? 'bg-brand-50 font-medium text-brand-700'
-                    : 'text-ink-600 hover:bg-ink-100 hover:text-ink-900'
+                    ? 'bg-nett-gold/10 font-medium text-nett-gold-light'
+                    : 'text-nett-text hover:bg-nett-raised hover:text-nett-text'
                 }`}
               >
                 <span>{entry.label}</span>
                 {entry.count ? (
                   <span
                     className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                      isActive ? 'bg-brand-100 text-brand-700' : 'bg-ink-100 text-ink-500'
+                      isActive ? 'bg-nett-gold/20 text-nett-gold-light' : 'bg-nett-raised text-nett-text-muted'
                     }`}
                   >
                     {entry.count}

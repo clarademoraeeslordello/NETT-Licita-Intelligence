@@ -65,7 +65,7 @@ export function RadarView() {
         descricao={
           <>
             Editais publicados no Portal Nacional de Contratações Públicas que ainda recebem propostas, ordenados pela
-            aderência ao perfil de <strong className="font-medium text-ink-700">{pronto ? ws.perfil.empresa : '…'}</strong>.
+            aderência ao perfil de <strong className="font-medium text-nett-text">{pronto ? ws.perfil.empresa : '…'}</strong>.
           </>
         }
         acoes={
@@ -85,22 +85,22 @@ export function RadarView() {
         {resposta ? (
           <span
             className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ${
-              resposta.fonte === 'pncp' ? 'bg-ok-100 text-ok-700' : 'bg-warn-100 text-warn-700'
+              resposta.fonte === 'pncp' ? 'bg-nett-gold/20 text-nett-gold-light' : 'bg-nett-gold-dark/30 text-nett-gold-light'
             }`}
           >
-            <span className={`size-1.5 rounded-full ${resposta.fonte === 'pncp' ? 'animate-pulse bg-ok-500' : 'bg-warn-500'}`} />
+            <span className={`size-1.5 rounded-full ${resposta.fonte === 'pncp' ? 'animate-pulse bg-nett-gold' : 'bg-nett-gold'}`} />
             {resposta.fonte === 'pncp' ? 'Dados ao vivo do PNCP' : `Amostra de ${dataHora(resposta.capturadoEm)}`}
           </span>
         ) : null}
         {pronto
           ? ws.perfil.termos.map((termo) => (
-              <span key={termo} className="rounded-full bg-white px-2.5 py-1 text-ink-600 shadow-ring">
+              <span key={termo} className="rounded-full bg-nett-surface px-2.5 py-1 text-nett-text shadow-ring">
                 {termo}
               </span>
             ))
           : null}
         {pronto && ws.perfil.ufs.length ? (
-          <span className="rounded-full bg-white px-2.5 py-1 text-ink-600 shadow-ring">{ws.perfil.ufs.join(' · ')}</span>
+          <span className="rounded-full bg-nett-surface px-2.5 py-1 text-nett-text shadow-ring">{ws.perfil.ufs.join(' · ')}</span>
         ) : null}
       </div>
 
@@ -114,8 +114,8 @@ export function RadarView() {
 
       {estado.fase === 'carregando' ? (
         <div>
-          <p className="mb-4 flex items-center gap-2 text-sm text-ink-500" role="status">
-            <IconRadar size={16} className="animate-spin text-brand-600 [animation-duration:2.4s]" />
+          <p className="mb-4 flex items-center gap-2 text-sm text-nett-text-muted" role="status">
+            <IconRadar size={16} className="animate-spin text-nett-gold [animation-duration:2.4s]" />
             Varrendo o PNCP pelos termos do perfil…
           </p>
           <LinhasEsqueleto linhas={6} altura="h-32" />
@@ -125,10 +125,10 @@ export function RadarView() {
       {estado.fase === 'pronto' ? (
         <>
           {/* Filtros */}
-          <div className="mb-4 grid gap-3 rounded-2xl border border-ink-200 bg-white p-3 shadow-soft sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto]">
+          <div className="mb-4 grid gap-3 rounded-2xl border border-nett-text-muted/15 bg-nett-surface p-3 shadow-soft sm:grid-cols-2 lg:grid-cols-[1fr_auto_auto_auto]">
             <label className="relative block">
               <span className="sr-only">Filtrar resultados</span>
-              <IconSearch size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+              <IconSearch size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-nett-text-muted" />
               <input
                 type="search"
                 value={busca}
@@ -137,10 +137,10 @@ export function RadarView() {
                   setLimite(POR_PAGINA);
                 }}
                 placeholder="Filtrar por objeto, órgão ou cidade"
-                className="w-full rounded-xl border border-ink-200 bg-ink-50/60 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-brand-300 focus:bg-white"
+                className="w-full rounded-xl border border-nett-text-muted/15 bg-nett-black/60 py-2 pl-9 pr-3 text-sm outline-none transition focus:border-nett-gold focus:bg-nett-surface"
               />
             </label>
-            <div className="flex rounded-xl bg-ink-100 p-1 text-xs font-medium" role="group" aria-label="Faixa de aderência">
+            <div className="flex rounded-xl bg-nett-raised p-1 text-xs font-medium" role="group" aria-label="Faixa de aderência">
               {(
                 [
                   ['alta', `Alta (${contagem.alta})`],
@@ -156,7 +156,7 @@ export function RadarView() {
                     setFaixa(valor);
                     setLimite(POR_PAGINA);
                   }}
-                  className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 transition ${faixa === valor ? 'bg-white text-ink-900 shadow-soft' : 'text-ink-500 hover:text-ink-800'}`}
+                  className={`flex-1 whitespace-nowrap rounded-lg px-3 py-1.5 transition ${faixa === valor ? 'bg-nett-surface text-nett-text shadow-soft' : 'text-nett-text-muted hover:text-nett-text'}`}
                 >
                   {rotulo}
                 </button>
@@ -166,7 +166,7 @@ export function RadarView() {
               value={uf}
               onChange={(event) => setUf(event.target.value)}
               aria-label="Filtrar por UF"
-              className="rounded-xl border border-ink-200 bg-white px-3 py-2 text-sm text-ink-700"
+              className="rounded-xl border border-nett-text-muted/15 bg-nett-surface px-3 py-2 text-sm text-nett-text"
             >
               <option value="">Todas as UFs</option>
               {ufsDisponiveis.map((sigla) => (
@@ -179,7 +179,7 @@ export function RadarView() {
               value={prazo}
               onChange={(event) => setPrazo(event.target.value as FiltroPrazo)}
               aria-label="Filtrar por prazo"
-              className="rounded-xl border border-ink-200 bg-white px-3 py-2 text-sm text-ink-700"
+              className="rounded-xl border border-nett-text-muted/15 bg-nett-surface px-3 py-2 text-sm text-nett-text"
             >
               <option value="todos">Qualquer prazo</option>
               <option value="curto">Encerra em até 7 dias</option>
@@ -187,9 +187,9 @@ export function RadarView() {
             </select>
           </div>
 
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-ink-500">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm text-nett-text-muted">
             <p>
-              <strong className="font-semibold text-ink-900">{filtrados.length}</strong> de {itens.length} oportunidades
+              <strong className="font-semibold text-nett-text">{filtrados.length}</strong> de {itens.length} oportunidades
               {carregandoValores ? ' · consultando valores estimados…' : ''}
             </p>
             {ws.descartadas.length ? (

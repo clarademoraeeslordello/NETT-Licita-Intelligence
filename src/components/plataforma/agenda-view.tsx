@@ -16,23 +16,23 @@ function horaBrasilia(iso: string): string {
 }
 
 export function ListaEventos({ eventos, vazio }: { eventos: EventoAgenda[]; vazio: string }) {
-  if (eventos.length === 0) return <p className="px-5 py-8 text-center text-sm text-ink-500">{vazio}</p>;
+  if (eventos.length === 0) return <p className="px-5 py-8 text-center text-sm text-nett-text-muted">{vazio}</p>;
   return (
-    <ul className="divide-y divide-ink-100">
+    <ul className="divide-y divide-nett-text-muted/10">
       {eventos.map((evento) => (
         <li key={evento.id}>
-          <Link href={evento.href} className="flex gap-3 px-5 py-3 transition hover:bg-ink-50">
+          <Link href={evento.href} className="flex gap-3 px-5 py-3 transition hover:bg-nett-black">
             <span className={`mt-1.5 size-2 shrink-0 rounded-full ${TIPO_EVENTO[evento.tipo].ponto}`} />
             <span className="min-w-0 flex-1">
-              <span className="flex flex-wrap items-center gap-x-2 text-[11px] font-medium text-ink-500">
+              <span className="flex flex-wrap items-center gap-x-2 text-[11px] font-medium text-nett-text-muted">
                 <span>{TIPO_EVENTO[evento.tipo].rotulo}</span>
                 <span className="font-mono">
                   {dataDia(evento.dia)}
                   {evento.quando ? ` · ${horaBrasilia(evento.quando)}` : ''}
                 </span>
               </span>
-              <span className="mt-0.5 line-clamp-2 text-sm text-ink-800">{evento.titulo}</span>
-              <span className="block truncate text-xs text-ink-500">{evento.detalhe}</span>
+              <span className="mt-0.5 line-clamp-2 text-sm text-nett-text">{evento.titulo}</span>
+              <span className="block truncate text-xs text-nett-text-muted">{evento.detalhe}</span>
             </span>
           </Link>
         </li>
@@ -95,7 +95,7 @@ export function AgendaView() {
             titulo={<span className="capitalize">{tituloMes}</span>}
             acao={
               <div className="flex items-center gap-1">
-                <button type="button" onClick={() => mover(-1)} className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100" aria-label="Mês anterior">
+                <button type="button" onClick={() => mover(-1)} className="rounded-lg p-1.5 text-nett-text-muted hover:bg-nett-raised" aria-label="Mês anterior">
                   <IconChevron size={16} className="rotate-180" />
                 </button>
                 <button
@@ -104,17 +104,17 @@ export function AgendaView() {
                     setCursor({ ano, mes });
                     setSelecionado(hoje);
                   }}
-                  className="rounded-lg px-2.5 py-1 text-xs font-medium text-ink-600 hover:bg-ink-100"
+                  className="rounded-lg px-2.5 py-1 text-xs font-medium text-nett-text hover:bg-nett-raised"
                 >
                   Hoje
                 </button>
-                <button type="button" onClick={() => mover(1)} className="rounded-lg p-1.5 text-ink-500 hover:bg-ink-100" aria-label="Próximo mês">
+                <button type="button" onClick={() => mover(1)} className="rounded-lg p-1.5 text-nett-text-muted hover:bg-nett-raised" aria-label="Próximo mês">
                   <IconChevron size={16} />
                 </button>
               </div>
             }
           >
-            <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium uppercase tracking-wide text-ink-400">
+            <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-medium uppercase tracking-wide text-nett-text-muted">
               {DIAS_SEMANA.map((dia) => (
                 <span key={dia} className="py-1">
                   {dia}
@@ -134,12 +134,12 @@ export function AgendaView() {
                     aria-pressed={ativo}
                     aria-label={`${dataDia(celula.chave)}${doDia.length ? `, ${doDia.length} evento(s)` : ''}`}
                     className={`flex min-h-16 flex-col items-start rounded-xl border p-1.5 text-left transition sm:min-h-24 sm:p-2 ${
-                      ativo ? 'border-brand-400 bg-brand-50' : 'border-transparent hover:bg-ink-50'
-                    } ${celula.doMes ? '' : 'opacity-40'}`}
+                      ativo ? 'border-nett-gold bg-nett-gold/10' : 'border-transparent hover:bg-nett-black'
+                    } ${celula.doMes ? '' : 'opacity-60'}`}
                   >
                     <span
                       className={`flex size-6 items-center justify-center rounded-full font-mono text-xs ${
-                        ehHoje ? 'bg-brand-600 font-semibold text-white' : 'text-ink-700'
+                        ehHoje ? 'bg-nett-gold font-semibold text-nett-black' : 'text-nett-text'
                       }`}
                     >
                       {celula.dia}
@@ -151,7 +151,7 @@ export function AgendaView() {
                           {evento.titulo}
                         </span>
                       ))}
-                      {doDia.length > 2 ? <span className="block px-1 text-[10px] text-ink-500">+{doDia.length - 2}</span> : null}
+                      {doDia.length > 2 ? <span className="block px-1 text-[10px] text-nett-text-muted">+{doDia.length - 2}</span> : null}
                     </span>
                     <span className="mt-1 flex gap-0.5 sm:hidden">
                       {doDia.slice(0, 3).map((evento) => (
@@ -162,7 +162,7 @@ export function AgendaView() {
                 );
               })}
             </div>
-            <div className="mt-4 flex flex-wrap gap-4 border-t border-ink-100 pt-3 text-xs text-ink-500">
+            <div className="mt-4 flex flex-wrap gap-4 border-t border-nett-text-muted/10 pt-3 text-xs text-nett-text-muted">
               {Object.values(TIPO_EVENTO).map((tipo) => (
                 <span key={tipo.rotulo} className="inline-flex items-center gap-1.5">
                   <span className={`size-2 rounded-full ${tipo.ponto}`} /> {tipo.rotulo}
@@ -175,7 +175,7 @@ export function AgendaView() {
             <Painel titulo={`Dia ${dataDia(selecionado)}`} semPadding>
               <ListaEventos eventos={porDia.get(selecionado) ?? []} vazio="Nada agendado para este dia." />
             </Painel>
-            <Painel titulo="Próximos compromissos" semPadding acao={<IconCalendar size={16} className="text-ink-400" />}>
+            <Painel titulo="Próximos compromissos" semPadding acao={<IconCalendar size={16} className="text-nett-text-muted" />}>
               <ListaEventos eventos={proximos} vazio="Nenhum prazo futuro. Adicione editais ao pipeline pelo Radar." />
             </Painel>
           </div>

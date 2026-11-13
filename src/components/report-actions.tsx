@@ -70,7 +70,7 @@ export function ReportActions({
           type="button"
           onClick={download}
           disabled={state === 'loading'}
-          className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-soft transition hover:bg-brand-700 disabled:cursor-wait disabled:bg-brand-400"
+          className="inline-flex items-center gap-2 rounded-xl bg-nett-gold px-4 py-2.5 text-sm font-medium text-nett-black shadow-soft transition hover:bg-nett-gold-light disabled:cursor-wait disabled:bg-nett-gold-light"
         >
           <IconDownload size={17} />
           <span className="hidden sm:inline">
@@ -84,7 +84,7 @@ export function ReportActions({
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Abrir versão de impressão do relatório em uma nova aba"
-          className="inline-flex items-center gap-2 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-sm font-medium text-ink-700 transition hover:border-ink-300 hover:bg-ink-50"
+          className="inline-flex items-center gap-2 rounded-xl border border-nett-text-muted/15 bg-nett-surface px-4 py-2.5 text-sm font-medium text-nett-text transition hover:border-nett-text-muted/30 hover:bg-nett-black"
         >
           <IconPrint size={16} />
           <span className="hidden sm:inline">Abrir versão de impressão</span>
@@ -92,13 +92,13 @@ export function ReportActions({
       </div>
 
       {!pdfAvailable ? (
-        <p className="mt-2 text-xs text-ink-500">
+        <p className="mt-2 text-xs text-nett-text-muted">
           O PDF abre numa nova aba: escolha <strong>“Salvar como PDF”</strong> como impressora.
         </p>
       ) : null}
 
       {state === 'error' && message ? (
-        <p className="mt-2 flex items-start gap-2 text-xs text-danger-700" role="alert">
+        <p className="mt-2 flex items-start gap-2 text-xs text-nett-text" role="alert">
           <IconAlert size={14} className="mt-0.5 shrink-0" />
           <span>
             {message} Use <strong>“Abrir versão de impressão”</strong> como alternativa.
@@ -107,7 +107,7 @@ export function ReportActions({
       ) : null}
 
       {state === 'done' ? (
-        <p className="mt-2 flex items-center gap-2 text-xs text-ok-700" role="status">
+        <p className="mt-2 flex items-center gap-2 text-xs text-nett-gold-light" role="status">
           <IconCheckCircle size={14} />
           Arquivo salvo na pasta de downloads.
         </p>
