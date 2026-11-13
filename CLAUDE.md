@@ -13,4 +13,5 @@ Leia e siga `AGENTS.md` antes de qualquer alteração (papéis, branches, fronte
 
 ## Comandos
 - `npm run dev` · `npm test` · `npm run build`
-- Contratos: `npx tsx --test src/contracts/contracts.test.ts`
+- Contratos e schema: `npm run test:contracts`
+- Banco: `npm run db:migrate` · `npm run test:db` · nova migration: `npm run db:generate`

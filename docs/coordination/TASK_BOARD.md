@@ -20,7 +20,7 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 
 | ID | Agente | Tarefa | Depende de | Status | Aceite |
 | --- | --- | --- | --- | --- | --- |
-| T-101 | 01 | Drizzle + schema de todas as entidades canônicas + migration inicial + usuários `app`/`migrator` | T-006 | pronta | schema compila contra `src/contracts`; teste de integração cria/lê cada tabela |
+| T-101 | 01 | Drizzle + schema de todas as entidades canônicas + migration inicial + usuários `app`/`migrator` | T-006 | em revisão | schema compila contra `src/contracts`; teste de integração cria/lê cada tabela |
 | T-102 | 01 | docker compose local: Postgres, Keycloak (realm de dev importável), MinIO | — | pronta [livre] | `npm run infra:up` sobe tudo; realm com usuários fictícios |
 | T-103 | 01 | Auth.js + Keycloak, `requireSession`, `requireCompanyAccess`, provisionamento no 1º login | T-101, T-102 | bloqueada | testes: sem sessão → 401; outra empresa → 403 |
 | T-104 | 04 | Tema de login Keycloak na paleta Nett | T-102 | bloqueada | screenshot + auditoria de cores |
