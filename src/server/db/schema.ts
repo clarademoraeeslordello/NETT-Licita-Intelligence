@@ -30,8 +30,7 @@ import * as c from '../../contracts';
 
 /* -------------------------------- helpers -------------------------------- */
 
-type Tuple = [string, ...string[]];
-const fromZod = (name: string, values: readonly string[]) => pgEnum(name, values as unknown as Tuple);
+const fromZod = <V extends string>(name: string, values: readonly V[]) => pgEnum(name, values as unknown as [V, ...V[]]);
 
 const id = () => uuid('id').primaryKey().defaultRandom();
 const tz = (name: string) => timestamp(name, { withTimezone: true });
@@ -381,3 +380,21 @@ export const consultantMetrics = pgTable('consultant_metrics', {
 }, (t) => [
   unique('consultant_metrics_period_uq').on(t.consultantUserId, t.companyId, t.granularity, t.periodStart).nullsNotDistinct(),
 ]);
+
+/* ------------------------------- sessões --------------------------------- */
+
+/**
+ * Sessão de aplicação (T-103). Suporte, não é entidade canônica.
+ * O cookie carrega um token aleatório; o banco guarda só o SHA-256 (vazamento do banco não reabre sessões).
+ * Papéis globais do Keycloak são fotografados no login; a sessão expira em no máximo 8 h.
+ */
+export const sessions = pgTable('sessions', {
+  id: id(),
+  tokenHash: text('token_hash').notNull().unique(),
+  userId: uuid('user_id').notNull().references(() => userAccounts.id, { onDelete: 'cascade' }),
+  realmRoles: text('realm_roles').array().notNull().default(sql`'{}'::text[]`),
+  createdAt: tz('created_at').notNull().defaultNow(),
+  lastSeenAt: tz('last_seen_at').notNull().defaultNow(),
+  expiresAt: tz('expires_at').notNull(),
+  revokedAt: tz('revoked_at'),
+}, (t) => [index('sessions_user_idx').on(t.userId), check('sessions_token_hash', sql`${t.tokenHash} ~ '^[a-f0-9]{64}$'`)]);
