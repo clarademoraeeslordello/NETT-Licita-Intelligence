@@ -12,7 +12,7 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | T-002 | Arquitetura alvo | concluída (proposta) | `docs/architecture/target-architecture.md` |
 | T-003 | Contratos v1 (Zod + doc) | concluída (aprovados 2026-11-13) | `src/contracts/`, `CONTRACTS.md`; 7 testes passando |
 | T-004 | Rodar build/testes do snapshot e anexar resultado (P-01) | pronta | — |
-| T-005 | CI (typecheck, lint, test, build) + template de PR | em andamento | template criado; workflow pendente |
+| T-005 | CI sob demanda (alto impacto + manual) + template de PR | em revisão | `.github/workflows/ci.yml` |
 | T-006 | Aprovação humana: contratos v1 e ADRs | concluída (2026-11-13) | aprovação na conversa com a responsável |
 | T-007 | Aprovação humana: custos Railway/Keycloak (P-05) e provedor de IA (P-04) | bloqueada (humano) | — |
 
@@ -20,14 +20,14 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 
 | ID | Agente | Tarefa | Depende de | Status | Aceite |
 | --- | --- | --- | --- | --- | --- |
-| T-101 | 01 | Drizzle + schema de todas as entidades canônicas + migration inicial + usuários `app`/`migrator` | T-006 | em revisão | schema compila contra `src/contracts`; teste de integração cria/lê cada tabela |
-| T-102 | 01 | docker compose local: Postgres, Keycloak (realm de dev importável), MinIO | — | pronta [livre] | `npm run infra:up` sobe tudo; realm com usuários fictícios |
-| T-103 | 01 | Auth.js + Keycloak, `requireSession`, `requireCompanyAccess`, provisionamento no 1º login | T-101, T-102 | bloqueada | testes: sem sessão → 401; outra empresa → 403 |
+| T-101 | 01 | Drizzle + schema de todas as entidades canônicas + migration inicial + usuários `app`/`migrator` | T-006 | concluída (PR #2) | schema compila contra `src/contracts`; teste de integração cria/lê cada tabela |
+| T-102 | 01 | docker compose local: Keycloak (realm importável), S3 (SeaweedFS), Postgres opcional (profile) | — | em revisão | `npm run infra:up` sobe tudo; realm com usuários fictícios |
+| T-103 | 01 | Auth.js + Keycloak, `requireSession`, `requireCompanyAccess`, provisionamento no 1º login | T-101, T-102 | pronta | testes: sem sessão → 401; outra empresa → 403 |
 | T-104 | 04 | Tema de login Keycloak na paleta Nett | T-102 | bloqueada | screenshot + auditoria de cores |
-| T-105 | 02 | pg-boss: `worker/index.ts`, registro de handlers, `enqueue` tipado | T-101 | bloqueada | teste: job enfileirado é processado e idempotente |
-| T-106 | 02 | `ObjectStorage` S3/MinIO + URL assinada | T-102 | pronta [livre] | teste de integração com MinIO |
+| T-105 | 02 | pg-boss: `worker/index.ts`, registro de handlers, `enqueue` tipado | T-101 | pronta | teste: job enfileirado é processado e idempotente |
+| T-106 | 02 | `ObjectStorage` S3 + URL assinada | T-102 | pronta | teste de integração com o S3 local (SeaweedFS) |
 | T-107 | 01 | Headers de segurança (CSP, HSTS), rate limit por usuário | T-103 | bloqueada | teste de headers |
-| T-108 | 01 | `AuditEvent` + `recordAudit()` | T-101 | bloqueada | escrita append-only testada |
+| T-108 | 01 | `AuditEvent` + `recordAudit()` | T-101 | pronta | escrita append-only testada |
 | T-109 | 03 | Quota de IA por empresa (substitui `arremate.usos`) | T-101, T-007 | bloqueada | teste de limite e estorno |
 
 ## Fase 2 — Fontes (agente 02)
@@ -60,7 +60,7 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | T-403 | Shell autenticado, seletor de empresa | T-103 | bloqueada |
 | T-404 | Radar, oportunidade, preços consumindo `/api/v1` | T-204, T-305 | bloqueada |
 | T-405 | Tela de revisão humana da análise | T-304 | bloqueada |
-| T-406 | Pipeline persistido (`OpportunityTracking`) + cofre de certidões | T-101, T-103 | bloqueada |
+| T-406 | Pipeline persistido (`OpportunityTracking`) + cofre de certidões | T-103 (T-101 concluída) | bloqueada |
 | T-407 | `metrics.compute` + painel de consultores | T-406, T-304 | bloqueada |
 
 ## Fase 5 — Integração (agente 01)

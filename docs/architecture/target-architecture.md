@@ -70,7 +70,7 @@ e2e/                     # Playwright ponta a ponta (ag. 01)
 
 | Ambiente | Serviços | Observação |
 | --- | --- | --- |
-| `local` | docker compose: postgres, keycloak, minio | dados fictícios |
+| `local` | docker compose: keycloak, S3 (SeaweedFS); Postgres 16 próprio ou `--profile postgres` | dados fictícios |
 | `staging` | web, worker, postgres, bucket, keycloak | deploy da `main` |
 | `production` | idem | promoção manual com aprovação humana |
 

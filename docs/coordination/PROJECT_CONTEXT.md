@@ -45,9 +45,10 @@ npm install
 npm run dev        # http://localhost:3000
 npm test           # typecheck + unit + routes + css (scripts herdados)
 npm run test:contracts   # contratos + alinhamento contrato↔schema
-# Banco (Postgres 16+; docker compose virá em T-102)
-npm run db:bootstrap     # papéis nett_app/nett_migrator + banco (superusuário)
-npm run db:migrate       # aplica db/migrations como nett_migrator
+# Infra local: Keycloak :8180 (realm nett) + S3 :8333 (bucket nett-licita)
+npm run infra:up         # sem Postgres próprio: docker compose --profile postgres up -d
+# Banco (Postgres 16+)
+npm run db:setup         # db:bootstrap (papéis + banco, superusuário) + db:migrate
 npm run db:generate      # gera migration após alterar src/server/db/schema.ts
 npm run test:db          # integração (DATABASE_URL_TEST)
 ```

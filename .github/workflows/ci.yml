@@ -1,0 +1,107 @@
+# CI sob demanda (ADR-012, revisado em 2026-11-13): roda SOMENTE em PR para main que toque
+# áreas de alto impacto, ou manualmente (Actions → CI → Run workflow). Mudanças só de UI/docs não disparam.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/contracts/**'
+      - 'src/server/db/**'
+      - 'src/server/auth/**'
+      - 'src/server/jobs/**'
+      - 'src/middleware.ts'
+      - 'db/migrations/**'
+      - 'scripts/db/**'
+      - 'worker/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tsconfig.json'
+      - 'next.config.ts'
+      - 'drizzle.config.ts'
+      - 'docker-compose.yml'
+      - 'docker/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      build:
+        description: 'Executar também o next build'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    name: Tipos, contratos e unidade
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx tsc --noEmit
+      - run: npm run test:contracts
+      - run: npm run test:unit
+
+  banco:
+    name: Migrations e integração (PostgreSQL 16)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16.10-alpine
+        env:
+          POSTGRES_PASSWORD: postgres_ci
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      DATABASE_URL_SUPERUSER: postgres://postgres:postgres_ci@localhost:5432/postgres
+      DB_NAME: nett_licita_ci
+      DB_APP_PASSWORD: app_ci
+      DB_MIGRATOR_PASSWORD: migrator_ci
+      DATABASE_URL_MIGRATOR: postgres://nett_migrator:migrator_ci@localhost:5432/nett_licita_ci
+      DATABASE_URL_TEST: postgres://nett_app:app_ci@localhost:5432/nett_licita_ci
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run db:bootstrap
+      - run: npm run db:migrate
+      - name: Migrations idempotentes
+        run: npm run db:migrate
+      - run: npm run test:db
+      - name: Schema sem migration pendente
+        run: |
+          npx drizzle-kit generate --name ci_check
+          if [ -n "$(git status --porcelain db/migrations)" ]; then
+            echo "::error::src/server/db/schema.ts mudou sem migration. Rode npm run db:generate e commite."
+            git status --porcelain db/migrations
+            exit 1
+          fi
+
+  build:
+    name: Build Next.js
+    if: github.event_name == 'workflow_dispatch' && inputs.build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
