@@ -48,7 +48,8 @@ Proibido a qualquer agente:
 
 ## 4. Estado atual dos gates
 
-- Contratos v1 (`CONTRACTS.md`): **rascunho — aguardando aprovação da responsável humana**. Até a aprovação, agentes 02–04 só podem fazer tarefas marcadas `sem-dependência-de-contrato` no quadro.
+- Contratos v1.0.0 (`CONTRACTS.md`) e ADR-001 a ADR-014: **aprovados em 2026-11-13**. Agentes 02–04 podem iniciar tarefas `pronta`; as que dependem de schema aguardam T-101.
+- Pendentes humanos: custos Railway/Keycloak (P-05) e provedor de IA (P-04) — T-007.
 - Branch protection na `main` e CI: **pendentes** (configuração humana no GitHub).
 
 ---

@@ -4,7 +4,7 @@
 
 Plataforma proprietária da Nett Tecnologia para inteligência em licitações públicas: encontrar oportunidades em fontes públicas (PNCP primeiro), ler editais com IA rastreável, medir aderência às capacidades de cada empresa cliente, apoiar a decisão humana de participar e acompanhar o desempenho dos consultores.
 
-**Premissa a confirmar (P-03):** consultores Nett atendem várias empresas clientes; cada empresa é um tenant isolado.
+**Premissa aprovada com os contratos v1 (P-03):** consultores Nett atendem várias empresas clientes; cada empresa é um tenant isolado.
 
 **Princípio inegociável:** apoio à decisão. A IA extrai e sinaliza; a decisão de participar, preço e envio de proposta são sempre humanos e registrados (`HumanReview`).
 
@@ -53,7 +53,6 @@ npx tsx --test src/contracts/contracts.test.ts
 | --- | --- | --- |
 | P-01 | Executar build/testes do snapshot e registrar resultado | agente 01 (T-004) |
 | P-02 | Validação jurídica do uso da base MIT em produto proprietário | humano |
-| P-03 | Confirmar modelo multiempresa com consultores | humano |
 | P-04 | Aprovar provedores de IA, retenção de dados e orçamento (ADR-008) | humano |
 | P-05 | Aprovar criação/custo dos serviços Railway e Keycloak | humano |
 | P-06 | Configurar branch protection na `main` (PR + CI + aprovação) | humano |

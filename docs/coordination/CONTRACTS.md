@@ -1,6 +1,6 @@
 # CONTRACTS.md — contratos entre módulos
 
-- Versão: **1.0.0-draft** · Status: **aguardando aprovação da responsável humana**
+- Versão: **1.0.0** · Status: **aprovado pela responsável humana em 2026-11-13**
 - Fonte da verdade executável: `src/contracts/*.ts` (Zod). Este documento explica; o código manda. Divergência entre os dois = bug do agente 01.
 - Alteração: PR do agente 01 (ou proposta de outro agente via handoff) + atualização de `CONTRACTS_VERSION` + entrada em `DECISIONS.md` se quebrar compatibilidade.
 
