@@ -9,6 +9,7 @@ on:
       - 'src/contracts/**'
       - 'src/server/db/**'
       - 'src/server/auth/**'
+      - 'src/app/api/auth/**'
       - 'src/server/jobs/**'
       - 'src/middleware.ts'
       - 'db/migrations/**'
@@ -50,10 +51,11 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npx tsc --noEmit
       - run: npm run test:contracts
+      - run: npm run test:auth
       - run: npm run test:unit
 
   banco:
-    name: Migrations e integração (PostgreSQL 16)
+    name: Migrations, banco e autenticação (PostgreSQL 16 + Keycloak)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
@@ -83,6 +85,18 @@ jobs:
       - name: Migrations idempotentes
         run: npm run db:migrate
       - run: npm run test:db
+      - name: Keycloak local (realm de docker/keycloak)
+        run: |
+          docker run -d --name keycloak -p 8180:8180 -p 9000:9000 \
+            -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin_ci -e KC_HEALTH_ENABLED=true \
+            -v "$PWD/docker/keycloak/realm-nett.json:/opt/keycloak/data/import/realm-nett.json:ro" \
+            quay.io/keycloak/keycloak:26.4.2 start-dev --import-realm --http-port=8180
+          for i in $(seq 1 60); do curl -sf http://localhost:9000/health/ready >/dev/null && exit 0; sleep 3; done
+          docker logs keycloak | tail -50; exit 1
+      - name: Autenticação (Postgres + Keycloak)
+        run: npm run test:auth:integration
+        env:
+          KEYCLOAK_TEST: '1'
       - name: Schema sem migration pendente
         run: |
           npx drizzle-kit generate --name ci_check
