@@ -44,7 +44,12 @@ Somente `#050505 #0D0D0D #111111 #C9A227 #F0D375 #8A6D1A #ECECEC #AFAFAF` (token
 npm install
 npm run dev        # http://localhost:3000
 npm test           # typecheck + unit + routes + css (scripts herdados)
-npx tsx --test src/contracts/contracts.test.ts
+npm run test:contracts   # contratos + alinhamento contrato↔schema
+# Banco (Postgres 16+; docker compose virá em T-102)
+npm run db:bootstrap     # papéis nett_app/nett_migrator + banco (superusuário)
+npm run db:migrate       # aplica db/migrations como nett_migrator
+npm run db:generate      # gera migration após alterar src/server/db/schema.ts
+npm run test:db          # integração (DATABASE_URL_TEST)
 ```
 
 ## Pendências abertas

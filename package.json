@@ -13,10 +13,17 @@
     "test:e2e": "node scripts/test-e2e.mjs",
     "test:css": "node scripts/audit-css.mjs",
     "verify": "node scripts/verify-pipeline.mjs",
-    "test": "npm run typecheck && npm run test:unit && npm run test:routes && npm run test:css"
+    "test": "npm run typecheck && npm run test:unit && npm run test:contracts && npm run test:routes && npm run test:css",
+    "test:contracts": "tsx --test src/contracts/contracts.test.ts src/server/db/schema.test.ts",
+    "test:db": "tsx --test src/server/db/db.integration.test.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:bootstrap": "tsx scripts/db/bootstrap.ts",
+    "db:migrate": "tsx scripts/db/migrate.ts"
   },
   "dependencies": {
+    "drizzle-orm": "^0.45.3",
     "next": "^15.5.25",
+    "pg": "^8.23.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "unpdf": "^1.8.1",
@@ -25,9 +32,12 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.10.1",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "drizzle-kit": "^0.31.11",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3"
   },
   "engines": {
