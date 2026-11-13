@@ -1,0 +1,15 @@
+{
+  "versao": "exemplo-0",
+  "oficial": false,
+  "descricao": "EXEMPLO NÃO OFICIAL para testes técnicos. Substituir pelo dicionário comercial aprovado da Nett em config/dicionario-comercial.json.",
+  "termos": [
+    { "termo": "software", "sinonimos": ["sistema informatizado", "sistema de gestao", "licenca de uso", "cessao de uso"], "categoria": "software" },
+    { "termo": "desenvolvimento de sistemas", "sinonimos": ["fabrica de software", "desenvolvimento de software"], "categoria": "servicos-ti" },
+    { "termo": "suporte tecnico de ti", "sinonimos": ["suporte tecnico em informatica", "service desk", "help desk"], "categoria": "servicos-ti" },
+    { "termo": "computacao em nuvem", "sinonimos": ["cloud", "hospedagem de sistemas", "data center"], "categoria": "infraestrutura" },
+    { "termo": "equipamentos de informatica", "sinonimos": ["microcomputadores", "notebooks", "computadores", "servidores de rede"], "categoria": "hardware" },
+    { "termo": "rede de dados", "sinonimos": ["cabeamento estruturado", "link de internet", "conectividade"], "categoria": "infraestrutura" },
+    { "termo": "seguranca da informacao", "sinonimos": ["firewall", "antivirus", "ciberseguranca"], "categoria": "seguranca" }
+  ],
+  "exclusoes": []
+}

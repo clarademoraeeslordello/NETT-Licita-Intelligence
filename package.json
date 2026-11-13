@@ -1,0 +1,29 @@
+{
+  "name": "nett-licita-intelligence",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "NETT Licita Intelligence — serviço de integrações, coleta e normalização de oportunidades (Agente 02).",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run tests/unidade",
+    "test:integracao": "vitest run tests/integracao --no-file-parallelism",
+    "db:migrar": "tsx src/db/migrar.ts",
+    "api": "tsx src/api/servidor.ts",
+    "worker": "tsx src/worker.ts",
+    "coletar": "tsx scripts/coletar-agora.ts",
+    "trello:webhook": "tsx scripts/trello-registrar-webhook.ts"
+  },
+  "dependencies": {
+    "pg": "^8.13.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.10",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
