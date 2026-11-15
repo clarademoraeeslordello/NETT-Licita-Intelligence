@@ -10,3 +10,4 @@ export * from './analysis';
 export * from './company';
 export * from './metrics';
 export * from './jobs';
+export * from './audit';

@@ -398,3 +398,39 @@ export const sessions = pgTable('sessions', {
   expiresAt: tz('expires_at').notNull(),
   revokedAt: tz('revoked_at'),
 }, (t) => [index('sessions_user_idx').on(t.userId), check('sessions_token_hash', sql`${t.tokenHash} ~ '^[a-f0-9]{64}$'`)]);
+
+/* ------------------------------- auditoria ------------------------------- */
+
+export const auditActorTypeEnum = fromZod('audit_actor_type', c.auditActorType.options);
+export const auditOutcomeEnum = fromZod('audit_outcome', c.auditOutcome.options);
+
+/** Append-only (trigger + REVOKE na migration 0004). T-108. */
+export const auditEvents = pgTable('audit_events', {
+  id: id(),
+  occurredAt: tz('occurred_at').notNull().defaultNow(),
+  actorType: auditActorTypeEnum('actor_type').notNull(),
+  actorUserId: uuid('actor_user_id').references(() => userAccounts.id),
+  companyId: uuid('company_id').references(() => companies.id),
+  action: text('action').notNull(),
+  entityType: text('entity_type'),
+  entityId: text('entity_id'),
+  outcome: auditOutcomeEnum('outcome').notNull(),
+  ipHash: text('ip_hash'),
+  requestId: text('request_id'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+}, (t) => [
+  check('audit_events_action_format', sql`${t.action} ~ '^[a-z][a-z_]*(\\.[a-z][a-z_]*)+$'`),
+  check('audit_events_metadata_size', sql`pg_column_size(${t.metadata}) <= 8192`),
+  index('audit_events_occurred_idx').on(t.occurredAt),
+  index('audit_events_company_idx').on(t.companyId, t.occurredAt),
+  index('audit_events_actor_idx').on(t.actorUserId, t.occurredAt),
+]);
+
+/* ------------------------------ rate limit ------------------------------- */
+
+/** Contador por janela fixa (T-107). Chave já vem com hash; nunca IP/token em claro. */
+export const rateLimitBuckets = pgTable('rate_limit_buckets', {
+  key: text('key').notNull(),
+  windowStart: tz('window_start').notNull(),
+  count: integer('count').notNull().default(0),
+}, (t) => [primaryKey({ columns: [t.key, t.windowStart] }), index('rate_limit_buckets_window_idx').on(t.windowStart)]);
