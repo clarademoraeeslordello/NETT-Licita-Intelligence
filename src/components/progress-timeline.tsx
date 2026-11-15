@@ -33,28 +33,28 @@ const DEFAULT_STEPS: StepState[] = [
 function StepIcon({ status }: { status: StepState['status'] }) {
   if (status === 'done') {
     return (
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ok-500 text-white shadow-sm">
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-nett-gold text-nett-black shadow-sm">
         <IconCheck size={15} />
       </span>
     );
   }
   if (status === 'error') {
     return (
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-danger-500 text-white shadow-sm">
+      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-nett-text text-nett-black shadow-sm">
         <IconAlert size={15} />
       </span>
     );
   }
   if (status === 'active') {
     return (
-      <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white shadow-sm animate-[pulse-ring_2s_ease-out_infinite]">
-        <span className="size-2.5 animate-pulse rounded-full bg-white" />
+      <span className="relative flex size-7 shrink-0 items-center justify-center rounded-full bg-nett-gold text-nett-black shadow-sm animate-[pulse-ring_2s_ease-out_infinite]">
+        <span className="size-2.5 animate-pulse rounded-full bg-nett-surface" />
       </span>
     );
   }
   return (
-    <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-ink-200 bg-white">
-      <span className="size-2 rounded-full bg-ink-300" />
+    <span className="flex size-7 shrink-0 items-center justify-center rounded-full border border-nett-text-muted/15 bg-nett-surface">
+      <span className="size-2 rounded-full bg-nett-text-muted/30" />
     </span>
   );
 }
@@ -88,36 +88,36 @@ export function ProgressTimeline({
   const current = steps.find((step) => step.status === 'active') ?? steps.find((step) => step.status === 'pending');
 
   return (
-    <div className="animate-[fade-up_0.4s_ease-out_both] rounded-3xl border border-ink-200 bg-white p-6 shadow-soft sm:p-8">
+    <div className="animate-[fade-up_0.4s_ease-out_both] rounded-3xl border border-nett-text-muted/15 bg-nett-surface p-6 shadow-soft sm:p-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-nett-gold/10 text-nett-gold">
             <IconSparkles size={22} />
           </span>
           <div className="min-w-0">
-            <p className="truncate font-medium text-ink-900" title={fileName}>
+            <p className="truncate font-medium text-nett-text" title={fileName}>
               {fileName}
             </p>
-            <p className="text-sm text-ink-500">
+            <p className="text-sm text-nett-text-muted">
               {fileSizeLabel}
               {isDemo ? ' · documento de demonstração' : ''}
             </p>
           </div>
         </div>
         <div className="text-right">
-          <p className="font-mono text-2xl font-semibold tabular-nums text-ink-900">{Math.round(progress)}%</p>
-          <p className="text-xs uppercase tracking-[0.14em] text-ink-500">progresso</p>
+          <p className="font-mono text-2xl font-semibold tabular-nums text-nett-text">{Math.round(progress)}%</p>
+          <p className="text-xs uppercase tracking-[0.14em] text-nett-text-muted">progresso</p>
         </div>
       </div>
 
-      <div className="mt-6 h-2 w-full overflow-hidden rounded-full bg-ink-100">
+      <div className="mt-6 h-2 w-full overflow-hidden rounded-full bg-nett-raised">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-brand-500 to-accent-500 transition-[width] duration-500 ease-out"
+          className="h-full rounded-full bg-gradient-to-r from-nett-gold to-nett-gold transition-[width] duration-500 ease-out"
           style={{ width: `${Math.max(3, Math.min(100, progress))}%` }}
         />
       </div>
 
-      <p className="mt-5 text-sm font-medium text-ink-800">
+      <p className="mt-5 text-sm font-medium text-nett-text">
         {error ? 'Processamento interrompido' : (current?.label ?? 'Concluído')}
       </p>
 
@@ -128,12 +128,12 @@ export function ProgressTimeline({
             <div className="min-w-0 pt-0.5">
               <p
                 className={`text-sm ${
-                  step.status === 'pending' ? 'text-ink-500' : 'font-medium text-ink-800'
+                  step.status === 'pending' ? 'text-nett-text-muted' : 'font-medium text-nett-text'
                 }`}
               >
                 {step.label}
               </p>
-              {step.detail ? <p className="mt-0.5 text-xs text-ink-500">{step.detail}</p> : null}
+              {step.detail ? <p className="mt-0.5 text-xs text-nett-text-muted">{step.detail}</p> : null}
             </div>
           </li>
         ))}
@@ -141,33 +141,33 @@ export function ProgressTimeline({
 
       <div
         ref={consoleRef}
-        className="scrollbar-slim mt-6 max-h-40 overflow-y-auto rounded-2xl border border-ink-200 bg-ink-950 p-4 font-mono text-[12px] leading-relaxed text-ink-300"
+        className="scrollbar-slim mt-6 max-h-40 overflow-y-auto rounded-2xl border border-nett-text-muted/15 bg-nett-black p-4 font-mono text-[12px] leading-relaxed text-nett-text-muted"
       >
         {events.map((event, index) => (
           <div key={`${event.at}-${index}`} className="flex gap-3">
-            <span className="shrink-0 text-ink-500">
+            <span className="shrink-0 text-nett-text-muted">
               {new Date(event.at).toLocaleTimeString('pt-BR', { hour12: false })}
             </span>
-            <span className="text-ink-100">{event.message}</span>
-            {event.detail ? <span className="text-ink-500">{event.detail}</span> : null}
+            <span className="text-nett-text">{event.message}</span>
+            {event.detail ? <span className="text-nett-text-muted">{event.detail}</span> : null}
           </div>
         ))}
         {!error && !steps.every((step) => step.status === 'done') ? (
-          <div className="mt-1 text-brand-300">▌</div>
+          <div className="mt-1 text-nett-gold-light">▌</div>
         ) : null}
       </div>
 
       {error ? (
-        <div className="mt-6 rounded-2xl border border-danger-100 bg-danger-100/40 p-4">
+        <div className="mt-6 rounded-2xl border border-nett-text/20 bg-nett-text/4 p-4">
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 text-danger-600">
+            <span className="mt-0.5 text-nett-text">
               <IconAlert size={20} />
             </span>
             <div className="min-w-0">
-              <p className="font-medium text-danger-700">{error.message}</p>
-              {error.hint ? <p className="mt-1 text-sm text-danger-700/80">{error.hint}</p> : null}
+              <p className="font-medium text-nett-text">{error.message}</p>
+              {error.hint ? <p className="mt-1 text-sm text-nett-text/80">{error.hint}</p> : null}
               {error.code ? (
-                <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-danger-700/70">
+                <p className="mt-2 font-mono text-[11px] uppercase tracking-wider text-nett-text/70">
                   código: {error.code}
                 </p>
               ) : null}
@@ -176,7 +176,7 @@ export function ProgressTimeline({
           <button
             type="button"
             onClick={onRetry}
-            className="mt-4 rounded-xl bg-ink-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-ink-800"
+            className="mt-4 rounded-xl bg-nett-raised px-4 py-2 text-sm font-medium text-nett-text transition hover:bg-nett-raised"
           >
             Tentar novamente
           </button>

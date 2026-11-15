@@ -88,16 +88,16 @@ export function PainelView() {
     <>
       {/* Primeira visita: explorar com dados de exemplo ou testar do zero. */}
       {pronto && !ws.inicio ? (
-        <section className="mb-6 flex flex-col gap-4 rounded-3xl border border-brand-200 bg-brand-50 p-5 sm:flex-row sm:items-center">
+        <section className="mb-6 flex flex-col gap-4 rounded-3xl border border-nett-gold/40 bg-nett-gold/10 p-5 sm:flex-row sm:items-center">
           <div className="flex-1">
-            <p className="font-semibold text-brand-900">Você está vendo uma empresa de exemplo</p>
-            <p className="mt-1 text-sm text-brand-800/80">
+            <p className="font-semibold text-nett-gold-light">Você está vendo uma empresa de exemplo</p>
+            <p className="mt-1 text-sm text-nett-gold-light/80">
               O pipeline e os documentos já vêm preenchidos para mostrar a plataforma funcionando. O radar e os preços são
               sempre dados reais do PNCP. Tudo fica salvo só no seu navegador.
             </p>
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <button type="button" onClick={() => escolherInicio('exemplo')} className="rounded-xl border border-brand-200 bg-white px-4 py-2.5 text-sm font-medium text-brand-800 transition hover:bg-brand-100">
+            <button type="button" onClick={() => escolherInicio('exemplo')} className="rounded-xl border border-nett-gold/40 bg-nett-surface px-4 py-2.5 text-sm font-medium text-nett-gold-light transition hover:bg-nett-gold/20">
               Explorar o exemplo
             </button>
             <button
@@ -106,7 +106,7 @@ export function PainelView() {
                 escolherInicio('zero');
                 router.push('/perfil');
               }}
-              className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-brand-700"
+              className="rounded-xl bg-nett-gold px-4 py-2.5 text-sm font-semibold text-nett-black shadow-soft transition hover:bg-nett-gold-light"
             >
               Começar do zero com a minha empresa
             </button>
@@ -115,19 +115,19 @@ export function PainelView() {
       ) : null}
 
       {/* Boas-vindas */}
-      <section className="relative mb-6 overflow-hidden rounded-3xl bg-ink-950 px-6 py-7 text-white sm:px-8">
+      <section className="relative mb-6 overflow-hidden rounded-3xl bg-nett-black px-6 py-7 text-nett-text sm:px-8">
         <div className="grid-bg pointer-events-none absolute inset-0 opacity-[0.07] invert" />
         <div
           className="pointer-events-none absolute -right-24 -top-24 size-80 rounded-full opacity-40 blur-3xl"
-          style={{ background: 'radial-gradient(closest-side, #3b66f6, transparent)' }}
+          style={{ background: 'radial-gradient(closest-side, #C9A227, transparent)' }}
         />
         <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-sm text-ink-300">
+            <p className="text-sm text-nett-text-muted">
               {dataHoje.charAt(0).toUpperCase() + dataHoje.slice(1)} · {pronto ? ws.perfil.empresa : '…'}
             </p>
             <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">{saudacao()}! Este é o seu painel de licitações.</h1>
-            <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink-300">
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-nett-text-muted">
               {estado.fase === 'pronto'
                 ? `O radar encontrou ${altas.length} edital(is) com alta aderência ao seu perfil entre ${itens.length} oportunidades abertas no PNCP.`
                 : estado.fase === 'carregando'
@@ -136,10 +136,10 @@ export function PainelView() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/radar" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-ink-900 transition hover:bg-brand-50">
+            <Link href="/radar" className="inline-flex items-center gap-2 rounded-xl bg-nett-surface px-4 py-2.5 text-sm font-medium text-nett-text transition hover:bg-nett-gold/10">
               <IconRadar size={16} /> Abrir radar
             </Link>
-            <Link href="/analisador" className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-medium text-white ring-1 ring-white/15 transition hover:bg-white/15">
+            <Link href="/analisador" className="inline-flex items-center gap-2 rounded-xl bg-nett-text/10 px-4 py-2.5 text-sm font-medium text-nett-text ring-1 ring-nett-text/15 transition hover:bg-nett-text/15">
               <IconSparkles size={16} /> Analisar edital
             </Link>
           </div>
@@ -178,7 +178,7 @@ export function PainelView() {
           titulo="Melhores oportunidades agora"
           semPadding
           acao={
-            <Link href="/radar" className="inline-flex items-center gap-1 text-xs font-medium text-brand-700">
+            <Link href="/radar" className="inline-flex items-center gap-1 text-xs font-medium text-nett-gold-light">
               Ver todas <IconArrowRight size={13} />
             </Link>
           }
@@ -190,18 +190,18 @@ export function PainelView() {
               ))}
             </div>
           ) : estado.fase === 'erro' ? (
-            <p className="p-5 text-sm text-ink-500">{estado.mensagem}</p>
+            <p className="p-5 text-sm text-nett-text-muted">{estado.mensagem}</p>
           ) : melhores.length === 0 ? (
-            <p className="p-5 text-sm text-ink-500">Nenhuma oportunidade aberta para os termos do perfil.</p>
+            <p className="p-5 text-sm text-nett-text-muted">Nenhuma oportunidade aberta para os termos do perfil.</p>
           ) : (
-            <ul className="divide-y divide-ink-100">
+            <ul className="divide-y divide-nett-text-muted/10">
               {melhores.map((item) => (
                 <li key={item.id}>
-                  <Link href={rotaOportunidade(item)} className="flex items-center gap-4 px-5 py-3.5 transition hover:bg-ink-50">
+                  <Link href={rotaOportunidade(item)} className="flex items-center gap-4 px-5 py-3.5 transition hover:bg-nett-black">
                     <NotaAderencia aderencia={item.aderencia} tamanho={40} />
                     <span className="min-w-0 flex-1">
-                      <span className="line-clamp-1 text-sm font-medium text-ink-900">{item.objeto}</span>
-                      <span className="mt-0.5 block truncate text-xs text-ink-500">
+                      <span className="line-clamp-1 text-sm font-medium text-nett-text">{item.objeto}</span>
+                      <span className="mt-0.5 block truncate text-xs text-nett-text-muted">
                         {tituloProprio(item.orgao)} · {item.uf} · {item.modalidade}
                       </span>
                     </span>
@@ -218,18 +218,18 @@ export function PainelView() {
 
         <Painel titulo={`Atenção${alertas.length ? ` (${alertas.length})` : ''}`} semPadding>
           {alertas.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-ink-500">Nada pendente. Documentos e prazos em dia.</p>
+            <p className="px-5 py-8 text-center text-sm text-nett-text-muted">Nada pendente. Documentos e prazos em dia.</p>
           ) : (
-            <ul className="divide-y divide-ink-100">
+            <ul className="divide-y divide-nett-text-muted/10">
               {alertas.slice(0, 6).map((alerta) => (
                 <li key={alerta.id}>
-                  <Link href={alerta.href} className="flex gap-3 px-5 py-3 transition hover:bg-ink-50">
-                    <span className={`mt-0.5 shrink-0 ${alerta.tom === 'danger' ? 'text-danger-600' : 'text-warn-500'}`}>
+                  <Link href={alerta.href} className="flex gap-3 px-5 py-3 transition hover:bg-nett-black">
+                    <span className={`mt-0.5 shrink-0 ${alerta.tom === 'danger' ? 'text-nett-text' : 'text-nett-gold-light'}`}>
                       <IconAlert size={18} />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-medium text-ink-800">{alerta.titulo}</span>
-                      <span className="block truncate text-xs text-ink-500">{alerta.detalhe}</span>
+                      <span className="block text-sm font-medium text-nett-text">{alerta.titulo}</span>
+                      <span className="block truncate text-xs text-nett-text-muted">{alerta.detalhe}</span>
                     </span>
                   </Link>
                 </li>
@@ -241,7 +241,7 @@ export function PainelView() {
         <Painel
           titulo="Funil do pipeline"
           acao={
-            <Link href="/pipeline" className="inline-flex items-center gap-1 text-xs font-medium text-brand-700">
+            <Link href="/pipeline" className="inline-flex items-center gap-1 text-xs font-medium text-nett-gold-light">
               Abrir <IconArrowRight size={13} />
             </Link>
           }
@@ -252,11 +252,11 @@ export function PainelView() {
               const valor = cards.reduce((total, card) => total + (card.valorProposta ?? card.oportunidade.valorEstimado ?? 0), 0);
               return (
                 <li key={etapa.id} className="grid grid-cols-[110px_1fr_auto] items-center gap-3 text-sm">
-                  <span className="text-ink-600">{etapa.label}</span>
-                  <span className="h-2.5 overflow-hidden rounded-full bg-ink-100">
+                  <span className="text-nett-text">{etapa.label}</span>
+                  <span className="h-2.5 overflow-hidden rounded-full bg-nett-raised">
                     <span className={`block h-full rounded-full ${etapa.cor}`} style={{ width: `${(cards.length / maiorEtapa) * 100}%` }} />
                   </span>
-                  <span className="w-28 whitespace-nowrap text-right font-mono text-xs text-ink-700">
+                  <span className="w-28 whitespace-nowrap text-right font-mono text-xs text-nett-text">
                     {cards.length} · {brlCompacto(valor || null)}
                   </span>
                 </li>
@@ -278,12 +278,12 @@ export function PainelView() {
           { icone: <IconChart size={18} />, titulo: '3. Precificar', texto: 'Veja por quanto itens parecidos foram vencidos.', href: '/precos' },
           { icone: <IconKanban size={18} />, titulo: '4. Disputar', texto: 'Pipeline, documentos e agenda para não perder prazo.', href: '/pipeline' },
         ].map((passo) => (
-          <Link key={passo.titulo} href={passo.href} className="group rounded-2xl border border-ink-200 bg-white p-4 transition hover:border-brand-200 hover:shadow-soft">
-            <span className="flex items-center gap-2 text-sm font-semibold text-ink-900">
-              <span className="text-brand-600">{passo.icone}</span>
+          <Link key={passo.titulo} href={passo.href} className="group rounded-2xl border border-nett-text-muted/15 bg-nett-surface p-4 transition hover:border-nett-gold/40 hover:shadow-soft">
+            <span className="flex items-center gap-2 text-sm font-semibold text-nett-text">
+              <span className="text-nett-gold">{passo.icone}</span>
               {passo.titulo}
             </span>
-            <span className="mt-1 block text-xs leading-relaxed text-ink-500">{passo.texto}</span>
+            <span className="mt-1 block text-xs leading-relaxed text-nett-text-muted">{passo.texto}</span>
           </Link>
         ))}
       </section>

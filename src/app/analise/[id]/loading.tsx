@@ -5,8 +5,8 @@
  */
 export default function LoadingAnalysis() {
   return (
-    <div className="min-h-dvh bg-ink-50">
-      <header className="sticky top-0 z-40 border-b border-ink-200/70 glass">
+    <div className="min-h-dvh bg-nett-black">
+      <header className="sticky top-0 z-40 border-b border-nett-text-muted/10 glass">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-5 py-3">
           <div className="skeleton size-9 rounded-xl" />
           <div className="space-y-2">
@@ -24,7 +24,7 @@ export default function LoadingAnalysis() {
         </div>
 
         <main className="min-w-0 space-y-5">
-          <section className="rounded-3xl border border-ink-200 bg-white p-6 shadow-soft">
+          <section className="rounded-3xl border border-nett-text-muted/15 bg-nett-surface p-6 shadow-soft">
             <div className="skeleton h-3 w-32 rounded-full" />
             <div className="skeleton mt-4 h-7 w-2/3 rounded-lg" />
             <div className="skeleton mt-3 h-3 w-1/2 rounded-full" />
@@ -37,7 +37,7 @@ export default function LoadingAnalysis() {
           </section>
 
           {Array.from({ length: 3 }).map((_, index) => (
-            <section key={index} className="rounded-3xl border border-ink-200 bg-white p-6 shadow-soft">
+            <section key={index} className="rounded-3xl border border-nett-text-muted/15 bg-nett-surface p-6 shadow-soft">
               <div className="flex items-center gap-4">
                 <div className="skeleton size-9 rounded-xl" />
                 <div className="skeleton h-4 w-48 rounded-full" />
@@ -51,7 +51,7 @@ export default function LoadingAnalysis() {
             </section>
           ))}
 
-          <p className="text-center text-sm text-ink-500" role="status">
+          <p className="text-center text-sm text-nett-text-muted" role="status">
             Montando o relatório da análise…
           </p>
         </main>

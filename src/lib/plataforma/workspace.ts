@@ -19,12 +19,12 @@ export type Perfil = PerfilAderencia & {
 export type EtapaId = 'triagem' | 'analise' | 'documentacao' | 'proposta' | 'disputa' | 'resultado';
 
 export const ETAPAS: Array<{ id: EtapaId; label: string; descricao: string; cor: string }> = [
-  { id: 'triagem', label: 'Triagem', descricao: 'Vale a pena disputar?', cor: 'bg-ink-400' },
-  { id: 'analise', label: 'Análise do edital', descricao: 'Leitura, riscos e exigências', cor: 'bg-brand-400' },
-  { id: 'documentacao', label: 'Documentação', descricao: 'Habilitação e declarações', cor: 'bg-accent-500' },
-  { id: 'proposta', label: 'Proposta', descricao: 'Preço e proposta comercial', cor: 'bg-warn-500' },
-  { id: 'disputa', label: 'Em disputa', descricao: 'Sessão pública e lances', cor: 'bg-brand-600' },
-  { id: 'resultado', label: 'Resultado', descricao: 'Ganhas e perdidas', cor: 'bg-ok-500' },
+  { id: 'triagem', label: 'Triagem', descricao: 'Vale a pena disputar?', cor: 'bg-nett-text-muted/45' },
+  { id: 'analise', label: 'Análise do edital', descricao: 'Leitura, riscos e exigências', cor: 'bg-nett-gold-light' },
+  { id: 'documentacao', label: 'Documentação', descricao: 'Habilitação e declarações', cor: 'bg-nett-gold' },
+  { id: 'proposta', label: 'Proposta', descricao: 'Preço e proposta comercial', cor: 'bg-nett-gold' },
+  { id: 'disputa', label: 'Em disputa', descricao: 'Sessão pública e lances', cor: 'bg-nett-gold' },
+  { id: 'resultado', label: 'Resultado', descricao: 'Ganhas e perdidas', cor: 'bg-nett-gold' },
 ];
 
 export const ETAPAS_ATIVAS: EtapaId[] = ['triagem', 'analise', 'documentacao', 'proposta', 'disputa'];

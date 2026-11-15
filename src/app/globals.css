@@ -17,54 +17,31 @@
     'Liberation Mono', monospace;
   --font-display: var(--font-sans);
 
-  --color-ink-50: #f6f8fb;
-  --color-ink-100: #eef2f8;
-  --color-ink-200: #dee5ef;
-  --color-ink-300: #c3cedd;
-  /* ink-400: escurecido para atender contraste AA em textos de 12 a 14px. */
-  --color-ink-400: #64748b;
-  --color-ink-500: #526074;
-  --color-ink-600: #43536b;
-  --color-ink-700: #334155;
-  --color-ink-800: #1e293b;
-  --color-ink-900: #0f172a;
-  --color-ink-950: #080d18;
-
-  --color-brand-50: #eef4ff;
-  --color-brand-100: #dbe6ff;
-  --color-brand-200: #bfd3ff;
-  --color-brand-300: #93b4ff;
-  --color-brand-400: #5f8bff;
-  --color-brand-500: #3b66f6;
-  --color-brand-600: #2748e3;
-  --color-brand-700: #2038b8;
-  --color-brand-800: #1f3393;
-  --color-brand-900: #1e2f74;
-
-  --color-accent-400: #38d6c4;
-  --color-accent-500: #14b8a6;
-  --color-accent-600: #0d9488;
-
-  --color-warn-100: #fef3c7;
-  --color-warn-500: #f59e0b;
-  --color-warn-700: #b45309;
-
-  --color-danger-100: #fee4e2;
-  --color-danger-500: #ef4444;
-  --color-danger-600: #dc2626;
-  --color-danger-700: #b42318;
-
-  --color-ok-100: #d1fadf;
-  --color-ok-500: #12b76a;
-  --color-ok-700: #067647;
+  /*
+   * Identidade visual NETT (CONTRACTS.md §6, ADR-009) — somente 8 cores.
+   * `--color-*: initial` remove a paleta padrão do Tailwind: classes de cor
+   * padrão deixam de gerar CSS. Variações apenas por
+   * opacidade (`/N`). Estados usam ícone + texto + borda, nunca outra matiz.
+   */
+  --color-*: initial;
+  --color-nett-black: #050505;
+  --color-nett-surface: #0D0D0D;
+  --color-nett-raised: #111111;
+  --color-nett-gold: #C9A227;
+  --color-nett-gold-light: #F0D375;
+  --color-nett-gold-dark: #8A6D1A;
+  --color-nett-text: #ECECEC;
+  --color-nett-text-muted: #AFAFAF;
 
   --radius-xl: 0.875rem;
   --radius-2xl: 1.125rem;
   --radius-3xl: 1.5rem;
 
-  --shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -8px rgb(15 23 42 / 0.12);
-  --shadow-lift: 0 2px 4px rgb(15 23 42 / 0.05), 0 24px 48px -16px rgb(15 23 42 / 0.22);
-  --shadow-ring: 0 0 0 1px rgb(15 23 42 / 0.06);
+  --shadow-soft: 0 8px 24px -12px color-mix(in oklab, #050505 80%, transparent);
+  --shadow-lift: 0 0 0 1px color-mix(in oklab, #C9A227 28%, transparent), 0 24px 48px -16px color-mix(in oklab, #050505 90%, transparent);
+  --shadow: 0 1px 3px 0 color-mix(in oklab, #050505 60%, transparent);
+  --shadow-sm: 0 1px 3px 0 color-mix(in oklab, #050505 60%, transparent);
+  --shadow-ring: 0 0 0 1px color-mix(in oklab, #AFAFAF 16%, transparent);
 
   --animate-fade-up: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-fade-in: fade-in 0.4s ease-out both;
@@ -103,13 +80,13 @@
 
 @keyframes pulse-ring {
   0% {
-    box-shadow: 0 0 0 0 rgb(59 102 246 / 0.35);
+    box-shadow: 0 0 0 0 color-mix(in oklab, #C9A227 35%, transparent);
   }
   70% {
-    box-shadow: 0 0 0 14px rgb(59 102 246 / 0);
+    box-shadow: 0 0 0 14px transparent;
   }
   100% {
-    box-shadow: 0 0 0 0 rgb(59 102 246 / 0);
+    box-shadow: 0 0 0 0 transparent;
   }
 }
 
@@ -127,7 +104,7 @@
 /* ------------------------------------------------------------------ */
 @layer base {
   * {
-    border-color: var(--color-ink-200);
+    border-color: color-mix(in oklab, var(--color-nett-text-muted) 15%, transparent);
   }
 
   html {
@@ -135,9 +112,13 @@
     scroll-behavior: smooth;
   }
 
+  html {
+    color-scheme: dark;
+  }
+
   body {
-    background-color: var(--color-ink-50);
-    color: var(--color-ink-900);
+    background-color: var(--color-nett-black);
+    color: var(--color-nett-text);
     font-family: var(--font-sans);
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
     -webkit-font-smoothing: antialiased;
@@ -145,12 +126,12 @@
   }
 
   ::selection {
-    background: var(--color-brand-200);
-    color: var(--color-brand-900);
+    background: var(--color-nett-gold);
+    color: var(--color-nett-black);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-brand-500);
+    outline: 2px solid var(--color-nett-gold);
     outline-offset: 2px;
     border-radius: 6px;
   }
@@ -182,23 +163,23 @@
 /* Utilitários                                                         */
 /* ------------------------------------------------------------------ */
 @utility glass {
-  background: color-mix(in oklab, white 72%, transparent);
+  background: color-mix(in oklab, #0D0D0D 78%, transparent);
   backdrop-filter: saturate(180%) blur(14px);
 }
 
 @utility grid-bg {
   background-image:
-    linear-gradient(to right, rgb(15 23 42 / 0.045) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(15 23 42 / 0.045) 1px, transparent 1px);
+    linear-gradient(to right, color-mix(in oklab, #C9A227 6%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, #C9A227 6%, transparent) 1px, transparent 1px);
   background-size: 44px 44px;
 }
 
 @utility skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-ink-100) 25%,
-    var(--color-ink-200) 37%,
-    var(--color-ink-100) 63%
+    var(--color-nett-raised) 25%,
+    color-mix(in oklab, var(--color-nett-text-muted) 12%, transparent) 37%,
+    var(--color-nett-raised) 63%
   );
   background-size: 200% 100%;
   animation: var(--animate-shimmer);
@@ -211,7 +192,7 @@
     height: 8px;
   }
   .scrollbar-slim::-webkit-scrollbar-thumb {
-    background: var(--color-ink-300);
+    background: var(--color-nett-gold-dark);
     border-radius: 999px;
   }
   .scrollbar-slim::-webkit-scrollbar-track {
@@ -235,7 +216,8 @@
     display: none !important;
   }
   body {
-    background: #fff;
+    background: #ECECEC;
+    color: #050505;
   }
   .print-block {
     break-inside: avoid;

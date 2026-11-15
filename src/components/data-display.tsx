@@ -7,10 +7,10 @@ export function StatusChip({ status, compact = false }: { status?: string; compa
   const key = status ?? 'not_found';
   const tone =
     key === 'found'
-      ? 'bg-ok-100 text-ok-700'
+      ? 'bg-nett-gold/20 text-nett-gold-light'
       : key === 'inferred'
-        ? 'bg-warn-100 text-warn-700'
-        : 'bg-ink-100 text-ink-600';
+        ? 'bg-nett-gold-dark/30 text-nett-gold-light'
+        : 'bg-nett-raised text-nett-text';
 
   const Icon = key === 'found' ? IconCheck : key === 'inferred' ? IconAlert : IconQuestion;
 
@@ -29,7 +29,7 @@ export function StatusChip({ status, compact = false }: { status?: string; compa
 export function SourceBadge({ source }: { source?: string | null }) {
   if (!source) return null;
   return (
-    <span className="inline-flex shrink-0 items-center rounded-full bg-brand-50 px-2.5 py-1 text-[11px] font-semibold text-brand-700">
+    <span className="inline-flex shrink-0 items-center rounded-full bg-nett-gold/10 px-2.5 py-1 text-[11px] font-semibold text-nett-gold-light">
       {source}
     </span>
   );
@@ -52,26 +52,26 @@ export function DataRow({
   const missing = status === 'not_found' || evidence?.value === null || evidence?.value === undefined;
 
   return (
-    <div className="grid gap-1.5 border-b border-ink-100 px-4 py-3.5 last:border-b-0 sm:grid-cols-[minmax(140px,26%)_1fr] sm:gap-4">
+    <div className="grid gap-1.5 border-b border-nett-text-muted/10 px-4 py-3.5 last:border-b-0 sm:grid-cols-[minmax(140px,26%)_1fr] sm:gap-4">
       <div>
-        <dt className="text-[13px] font-semibold uppercase tracking-[0.06em] text-ink-500">{label}</dt>
-        {hint ? <p className="mt-1 text-xs text-ink-500">{hint}</p> : null}
+        <dt className="text-[13px] font-semibold uppercase tracking-[0.06em] text-nett-text-muted">{label}</dt>
+        {hint ? <p className="mt-1 text-xs text-nett-text-muted">{hint}</p> : null}
       </div>
       <dd className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
-          <span className={`text-[15px] ${missing ? 'italic text-ink-500' : 'font-medium text-ink-900'}`}>
+          <span className={`text-[15px] ${missing ? 'italic text-nett-text-muted' : 'font-medium text-nett-text'}`}>
             {missing ? 'Não identificado no documento.' : String(evidence?.value)}
           </span>
           <StatusChip status={status} compact />
           <SourceBadge source={evidence?.source} />
         </div>
         {evidence?.status === 'inferred' && evidence.reason ? (
-          <p className="mt-1.5 text-[13px] leading-relaxed text-warn-700">
+          <p className="mt-1.5 text-[13px] leading-relaxed text-nett-gold-light">
             <strong className="font-semibold">Como foi deduzido:</strong> {evidence.reason}
           </p>
         ) : null}
         {evidence?.quote ? (
-          <blockquote className="mt-2 border-l-2 border-ink-200 bg-ink-50/70 px-3 py-2 text-[13px] italic leading-relaxed text-ink-600">
+          <blockquote className="mt-2 border-l-2 border-nett-text-muted/15 bg-nett-black/70 px-3 py-2 text-[13px] italic leading-relaxed text-nett-text">
             “{evidence.quote}”
           </blockquote>
         ) : null}
@@ -92,7 +92,7 @@ export function SourcedList({
 }) {
   if (!items || items.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-ink-200 bg-ink-50/60 px-4 py-3 text-sm italic text-ink-500">
+      <p className="rounded-xl border border-dashed border-nett-text-muted/15 bg-nett-black/60 px-4 py-3 text-sm italic text-nett-text-muted">
         {emptyLabel}
       </p>
     );
@@ -103,12 +103,12 @@ export function SourcedList({
       {items.map((item, index) => (
         <li
           key={`${item.text.slice(0, 40)}-${index}`}
-          className={`print-block rounded-xl border border-ink-200 bg-white ${dense ? 'px-3.5 py-2.5' : 'px-4 py-3'}`}
+          className={`print-block rounded-xl border border-nett-text-muted/15 bg-nett-surface ${dense ? 'px-3.5 py-2.5' : 'px-4 py-3'}`}
         >
           <div className="flex items-start gap-3">
-            <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-brand-400" />
+            <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-nett-gold-light" />
             <div className="min-w-0 flex-1">
-              <p className={`text-ink-800 ${dense ? 'text-[14px]' : 'text-[14.5px]'} leading-relaxed`}>{item.text}</p>
+              <p className={`text-nett-text ${dense ? 'text-[14px]' : 'text-[14.5px]'} leading-relaxed`}>{item.text}</p>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <SourceBadge source={item.source} />
                 {item.status === 'inferred' ? <StatusChip status="inferred" compact /> : null}
