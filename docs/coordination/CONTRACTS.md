@@ -124,9 +124,11 @@ export interface ObjectStorage {
   signedUrl(key: string, ttlSeconds: number): Promise<string>;   // ttl ≤ 600
 }
 
-// src/server/auth/guard.ts — agente 01
-export function requireSession(): Promise<Session>;
-export function requireCompanyAccess(session: Session, companyId: string, minRole: CompanyRole): Promise<void>;
+// src/server/auth (importar de '@/server/auth') — agente 01
+export function requireSession(): Promise<Session>;                       // 401 se ausente/expirada
+export function requireCompanyAccess(session: Session, companyId: string, minRole: CompanyRole): Promise<CompanyRole>; // 403
+export function requireRealmRole(session: Session, role: 'nett_admin' | 'nett_consultant'): void;
+export function withApi(handler): RouteHandler;  // obrigatório em toda rota /api/v1: erros → apiError, checagem de Origin
 
 // src/server/jobs/enqueue.ts — agente 02
 export function enqueue<N extends JobName>(name: N, payload: JobPayload<N>): Promise<string>;

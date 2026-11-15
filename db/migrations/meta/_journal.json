@@ -15,6 +15,13 @@
       "when": 1794611021696,
       "tag": "0001_integrity_and_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794612001947,
+      "tag": "0002_sessions",
+      "breakpoints": true
     }
   ]
 }
