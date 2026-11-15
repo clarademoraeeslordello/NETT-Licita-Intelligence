@@ -18,9 +18,9 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="min-w-0">
-        {eyebrow ? <p className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">{eyebrow}</p> : null}
-        <h1 className="mt-1 text-2xl font-semibold text-ink-900 sm:text-[28px]">{titulo}</h1>
-        {descricao ? <p className="text-pretty mt-1.5 max-w-2xl text-sm leading-relaxed text-ink-500">{descricao}</p> : null}
+        {eyebrow ? <p className="text-xs font-semibold uppercase tracking-[0.14em] text-nett-gold">{eyebrow}</p> : null}
+        <h1 className="mt-1 text-2xl font-semibold text-nett-text sm:text-[28px]">{titulo}</h1>
+        {descricao ? <p className="text-pretty mt-1.5 max-w-2xl text-sm leading-relaxed text-nett-text-muted">{descricao}</p> : null}
       </div>
       {acoes ? <div className="flex flex-wrap items-center gap-2">{acoes}</div> : null}
     </div>
@@ -41,10 +41,10 @@ export function Painel({
   semPadding?: boolean;
 }) {
   return (
-    <section className={`min-w-0 rounded-2xl border border-ink-200 bg-white shadow-soft ${className}`}>
+    <section className={`min-w-0 rounded-2xl border border-nett-text-muted/15 bg-nett-surface shadow-soft ${className}`}>
       {titulo ? (
-        <div className="flex items-center justify-between gap-3 border-b border-ink-100 px-5 py-3.5">
-          <h2 className="text-sm font-semibold text-ink-900">{titulo}</h2>
+        <div className="flex items-center justify-between gap-3 border-b border-nett-text-muted/10 px-5 py-3.5">
+          <h2 className="text-sm font-semibold text-nett-text">{titulo}</h2>
           {acao}
         </div>
       ) : null}
@@ -69,25 +69,25 @@ export function Kpi({
   href?: string;
 }) {
   const cores = {
-    brand: 'bg-brand-50 text-brand-600',
-    accent: 'bg-accent-400/15 text-accent-600',
-    warn: 'bg-warn-100 text-warn-700',
-    danger: 'bg-danger-100 text-danger-600',
-    ok: 'bg-ok-100 text-ok-700',
+    brand: 'bg-nett-gold/10 text-nett-gold',
+    accent: 'bg-nett-gold-light/15 text-nett-gold',
+    warn: 'bg-nett-gold-dark/30 text-nett-gold-light',
+    danger: 'bg-nett-text/10 text-nett-text',
+    ok: 'bg-nett-gold/20 text-nett-gold-light',
   }[tom];
   const conteudo = (
     <>
       <div className="flex items-start justify-between gap-3">
-        <p className="text-sm text-ink-500">{rotulo}</p>
+        <p className="text-sm text-nett-text-muted">{rotulo}</p>
         <span className={`flex size-9 items-center justify-center rounded-xl ${cores}`}>{icone}</span>
       </div>
-      <p className="mt-2 font-mono text-2xl font-semibold tracking-tight text-ink-900">{valor}</p>
-      {detalhe ? <p className="mt-1 text-xs text-ink-500">{detalhe}</p> : null}
+      <p className="mt-2 font-mono text-2xl font-semibold tracking-tight text-nett-text">{valor}</p>
+      {detalhe ? <p className="mt-1 text-xs text-nett-text-muted">{detalhe}</p> : null}
     </>
   );
-  const classes = 'block rounded-2xl border border-ink-200 bg-white p-5 shadow-soft';
+  const classes = 'block rounded-2xl border border-nett-text-muted/15 bg-nett-surface p-5 shadow-soft';
   return href ? (
-    <Link href={href} className={`${classes} transition hover:border-brand-200 hover:shadow-lift`}>
+    <Link href={href} className={`${classes} transition hover:border-nett-gold/40 hover:shadow-lift`}>
       {conteudo}
     </Link>
   ) : (
@@ -96,9 +96,9 @@ export function Kpi({
 }
 
 const FAIXA_CORES: Record<Aderencia['faixa'], { anel: string; texto: string; fundo: string }> = {
-  alta: { anel: '#12b76a', texto: 'text-ok-700', fundo: 'bg-ok-100' },
-  media: { anel: '#f59e0b', texto: 'text-warn-700', fundo: 'bg-warn-100' },
-  baixa: { anel: '#94a3b8', texto: 'text-ink-500', fundo: 'bg-ink-100' },
+  alta: { anel: '#F0D375', texto: 'text-nett-gold-light', fundo: 'bg-nett-gold/20' },
+  media: { anel: '#C9A227', texto: 'text-nett-gold-light', fundo: 'bg-nett-gold-dark/30' },
+  baixa: { anel: '#8A6D1A', texto: 'text-nett-text-muted', fundo: 'bg-nett-raised' },
 };
 
 /** Anel com a nota de aderência (0–100). */
@@ -114,7 +114,7 @@ export function NotaAderencia({ aderencia, tamanho = 48 }: { aderencia: Aderenci
       aria-label={`Aderência ${aderencia.nota} de 100`}
     >
       <svg width={tamanho} height={tamanho} className="-rotate-90">
-        <circle cx={tamanho / 2} cy={tamanho / 2} r={raio} fill="none" stroke="#eef2f8" strokeWidth={4} />
+        <circle cx={tamanho / 2} cy={tamanho / 2} r={raio} fill="none" stroke="#111111" strokeWidth={4} />
         <circle
           cx={tamanho / 2}
           cy={tamanho / 2}
@@ -155,9 +155,9 @@ export function Aviso({
   acao?: React.ReactNode;
 }) {
   const estilos = {
-    warn: 'border-warn-500/30 bg-warn-100/50 text-warn-700',
-    danger: 'border-danger-100 bg-danger-100/40 text-danger-700',
-    info: 'border-brand-200 bg-brand-50 text-brand-800',
+    warn: 'border-nett-gold/30 bg-nett-gold-dark/15 text-nett-gold-light',
+    danger: 'border-nett-text/20 bg-nett-text/4 text-nett-text',
+    info: 'border-nett-gold/40 bg-nett-gold/10 text-nett-gold-light',
   }[tom];
   return (
     <div role={tom === 'danger' ? 'alert' : 'status'} className={`flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center ${estilos}`}>
@@ -183,7 +183,7 @@ export function ErroCarregamento({ mensagem, dica, onTentar }: { mensagem: strin
           <button
             type="button"
             onClick={onTentar}
-            className="inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-sm font-medium text-danger-700 shadow-ring transition hover:bg-danger-100/40"
+            className="inline-flex items-center gap-2 rounded-xl bg-nett-surface px-3.5 py-2 text-sm font-medium text-nett-text shadow-ring transition hover:bg-nett-text/4"
           >
             <IconRefresh size={16} /> Tentar novamente
           </button>
@@ -197,10 +197,10 @@ export function ErroCarregamento({ mensagem, dica, onTentar }: { mensagem: strin
 
 export function Vazio({ icone, titulo, children, acao }: { icone: React.ReactNode; titulo: string; children?: React.ReactNode; acao?: React.ReactNode }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-ink-200 bg-white px-6 py-12 text-center">
-      <span className="flex size-12 items-center justify-center rounded-2xl bg-ink-50 text-ink-400">{icone}</span>
-      <p className="mt-4 font-medium text-ink-900">{titulo}</p>
-      {children ? <div className="mt-1 max-w-md text-sm text-ink-500">{children}</div> : null}
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-nett-text-muted/15 bg-nett-surface px-6 py-12 text-center">
+      <span className="flex size-12 items-center justify-center rounded-2xl bg-nett-black text-nett-text-muted">{icone}</span>
+      <p className="mt-4 font-medium text-nett-text">{titulo}</p>
+      {children ? <div className="mt-1 max-w-md text-sm text-nett-text-muted">{children}</div> : null}
       {acao ? <div className="mt-5">{acao}</div> : null}
     </div>
   );
@@ -217,10 +217,10 @@ export function LinhasEsqueleto({ linhas = 5, altura = 'h-20' }: { linhas?: numb
 }
 
 export const botaoPrimario =
-  'inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-soft transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-ink-200 disabled:text-ink-500 disabled:shadow-none';
+  'inline-flex items-center justify-center gap-2 rounded-xl bg-nett-gold px-4 py-2.5 text-sm font-medium text-nett-black shadow-soft transition hover:bg-nett-gold-light disabled:cursor-not-allowed disabled:bg-nett-text-muted/15 disabled:text-nett-text-muted disabled:shadow-none';
 
 export const botaoSecundario =
-  'inline-flex items-center justify-center gap-2 rounded-xl border border-ink-200 bg-white px-4 py-2.5 text-sm font-medium text-ink-700 transition hover:border-ink-300 hover:bg-ink-50 disabled:cursor-not-allowed disabled:opacity-60';
+  'inline-flex items-center justify-center gap-2 rounded-xl border border-nett-text-muted/15 bg-nett-surface px-4 py-2.5 text-sm font-medium text-nett-text transition hover:border-nett-text-muted/30 hover:bg-nett-black disabled:cursor-not-allowed disabled:opacity-60';
 
 export const botaoFantasma =
-  'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-ink-500 transition hover:bg-ink-100 hover:text-ink-800';
+  'inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-nett-text-muted transition hover:bg-nett-raised hover:text-nett-text';

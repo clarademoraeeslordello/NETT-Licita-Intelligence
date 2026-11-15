@@ -15,15 +15,15 @@ export default function GlobalError({ error, reset }: { error: Error; reset: () 
   }, [error]);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-ink-50 px-5 py-16">
-      <div className="w-full max-w-lg rounded-3xl border border-ink-200 bg-white p-8 text-center shadow-lift">
-        <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-danger-100/60 text-danger-700">
+    <main className="flex min-h-dvh items-center justify-center bg-nett-black px-5 py-16">
+      <div className="w-full max-w-lg rounded-3xl border border-nett-text-muted/15 bg-nett-surface p-8 text-center shadow-lift">
+        <span className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-nett-text/6 text-nett-text">
           <IconAlert size={24} />
         </span>
 
-        <h1 className="mt-5 text-2xl font-semibold text-ink-900">Não foi possível exibir esta página</h1>
+        <h1 className="mt-5 text-2xl font-semibold text-nett-text">Não foi possível exibir esta página</h1>
 
-        <p className="mt-3 text-[15px] leading-relaxed text-ink-600">
+        <p className="mt-3 text-[15px] leading-relaxed text-nett-text">
           Ocorreu um erro inesperado ao montar a tela. O documento enviado não é afetado — na maioria dos casos basta
           tentar novamente.
         </p>
@@ -32,20 +32,20 @@ export default function GlobalError({ error, reset }: { error: Error; reset: () 
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-medium text-white shadow-soft transition hover:bg-brand-700"
+            className="inline-flex items-center gap-2 rounded-xl bg-nett-gold px-5 py-3 text-sm font-medium text-nett-black shadow-soft transition hover:bg-nett-gold-light"
           >
             <IconRefresh size={16} />
             Tentar novamente
           </button>
           <a
             href="/"
-            className="inline-flex items-center gap-2 rounded-xl border border-ink-200 px-5 py-3 text-sm font-medium text-ink-700 transition hover:border-ink-300 hover:bg-ink-50"
+            className="inline-flex items-center gap-2 rounded-xl border border-nett-text-muted/15 px-5 py-3 text-sm font-medium text-nett-text transition hover:border-nett-text-muted/30 hover:bg-nett-black"
           >
             Voltar ao início
           </a>
         </div>
 
-        <p className="mt-6 text-xs text-ink-500">
+        <p className="mt-6 text-xs text-nett-text-muted">
           Se o erro persistir, verifique o terminal onde a aplicação está em execução.
         </p>
       </div>

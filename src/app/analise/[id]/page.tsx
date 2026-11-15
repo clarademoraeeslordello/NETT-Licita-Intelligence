@@ -55,13 +55,13 @@ export default async function AnalysisPage({ params }: PageProps) {
       : 'Motor local (demonstração)';
 
   return (
-    <div className="min-h-dvh bg-ink-50">
+    <div className="min-h-dvh bg-nett-black">
       {/* ------------------------------- Header ------------------------------ */}
-      <header className="sticky top-0 z-40 border-b border-ink-200/70 glass no-print">
+      <header className="sticky top-0 z-40 border-b border-nett-text-muted/10 glass no-print">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <Link href="/" className="flex items-center gap-3" aria-label="Voltar ao painel do LicitaFlow">
-              <span className="flex size-9 items-center justify-center rounded-xl bg-linear-to-br from-brand-400 to-brand-700 text-white shadow-soft">
+              <span className="flex size-9 items-center justify-center rounded-xl bg-linear-to-br from-nett-gold-light to-nett-gold-light text-nett-text shadow-soft">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M5 19 12 5l7 14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
                   <path d="M8.5 13.5h7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
@@ -70,22 +70,22 @@ export default async function AnalysisPage({ params }: PageProps) {
             </Link>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <p className="truncate text-sm font-semibold text-ink-900" title={job.fileName}>
+                <p className="truncate text-sm font-semibold text-nett-text" title={job.fileName}>
                   {job.fileName}
                 </p>
                 {job.isDemo ? (
-                  <span className="shrink-0 rounded-full bg-warn-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-warn-700">
+                  <span className="shrink-0 rounded-full bg-nett-gold-dark/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-nett-gold-light">
                     demonstração
                   </span>
                 ) : null}
               </div>
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-500">
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-nett-text-muted">
                 <span>{formatBytes(job.fileSize)}</span>
-                <span className="text-ink-300">·</span>
+                <span className="text-nett-text-muted">·</span>
                 <span>{pluralize(analise.documento.paginas ?? 0, 'página', 'páginas')}</span>
-                <span className="text-ink-300">·</span>
+                <span className="text-nett-text-muted">·</span>
                 <span>{formatDateTimeLabel(job.createdAt)}</span>
-                <span className="text-ink-300">·</span>
+                <span className="text-nett-text-muted">·</span>
                 <span className="inline-flex items-center gap-1">
                   <IconSparkles size={12} />
                   {motorLabel}
@@ -102,7 +102,7 @@ export default async function AnalysisPage({ params }: PageProps) {
             />
             <Link
               href="/analisador"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-ink-200 bg-white px-3.5 py-2.5 text-sm font-medium text-ink-600 transition hover:border-ink-300 hover:text-ink-900"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-nett-text-muted/15 bg-nett-surface px-3.5 py-2.5 text-sm font-medium text-nett-text transition hover:border-nett-text-muted/30 hover:text-nett-text"
             >
               <IconChevron size={15} className="rotate-180" />
               Novo edital
@@ -114,7 +114,7 @@ export default async function AnalysisPage({ params }: PageProps) {
       {/* ------------------------------- Avisos ------------------------------ */}
       {meta.engine !== 'deepseek' ? (
         <div className="no-print mx-auto max-w-7xl px-5 pt-5">
-          <div className="rounded-2xl border border-warn-100 bg-warn-100/40 px-5 py-4 text-sm text-warn-700">
+          <div className="rounded-2xl border border-nett-gold-dark bg-nett-gold-dark/12 px-5 py-4 text-sm text-nett-gold-light">
             <p className="font-semibold">Análise produzida pelo motor local de demonstração</p>
             <p className="mt-1 leading-relaxed">
               Sem <code className="font-mono">DEEPSEEK_API_KEY</code> configurada, o sistema usa extração determinística
@@ -127,12 +127,12 @@ export default async function AnalysisPage({ params }: PageProps) {
 
       {meta.avisos.length ? (
         <div className="no-print mx-auto max-w-7xl px-5 pt-5">
-          <div className="rounded-2xl border border-ink-200 bg-white px-5 py-4">
-            <p className="flex items-center gap-2 text-sm font-semibold text-ink-800">
+          <div className="rounded-2xl border border-nett-text-muted/15 bg-nett-surface px-5 py-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-nett-text">
               <IconLayers size={15} />
               Observações do processamento
             </p>
-            <ul className="mt-2 space-y-1 text-[13px] leading-relaxed text-ink-500">
+            <ul className="mt-2 space-y-1 text-[13px] leading-relaxed text-nett-text-muted">
               {meta.avisos.map((aviso, index) => (
                 <li key={index}>• {aviso}</li>
               ))}
@@ -146,41 +146,41 @@ export default async function AnalysisPage({ params }: PageProps) {
         <aside className="no-print xl:pt-1">
           <ReportToc entries={toc} />
 
-          <div className="mt-5 hidden rounded-2xl border border-ink-200 bg-white p-4 xl:block">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500">Resumo técnico</p>
+          <div className="mt-5 hidden rounded-2xl border border-nett-text-muted/15 bg-nett-surface p-4 xl:block">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-nett-text-muted">Resumo técnico</p>
             <dl className="mt-3 space-y-2.5 text-[13px]">
               <div className="flex items-start justify-between gap-3">
-                <dt className="text-ink-500">Motor</dt>
-                <dd className="text-right font-medium text-ink-800">{meta.engine === 'deepseek' ? 'IA (LLM)' : 'Local'}</dd>
+                <dt className="text-nett-text-muted">Motor</dt>
+                <dd className="text-right font-medium text-nett-text">{meta.engine === 'deepseek' ? 'IA (LLM)' : 'Local'}</dd>
               </div>
               <div className="flex items-start justify-between gap-3">
-                <dt className="text-ink-500">Blocos analisados</dt>
-                <dd className="font-mono font-medium text-ink-800">{meta.chunks ?? 1}</dd>
+                <dt className="text-nett-text-muted">Blocos analisados</dt>
+                <dd className="font-mono font-medium text-nett-text">{meta.chunks ?? 1}</dd>
               </div>
               <div className="flex items-start justify-between gap-3">
-                <dt className="text-ink-500">Chamadas ao modelo</dt>
-                <dd className="font-mono font-medium text-ink-800">{meta.llmCalls ?? 0}</dd>
+                <dt className="text-nett-text-muted">Chamadas ao modelo</dt>
+                <dd className="font-mono font-medium text-nett-text">{meta.llmCalls ?? 0}</dd>
               </div>
               <div className="flex items-start justify-between gap-3">
-                <dt className="text-ink-500">Tokens</dt>
-                <dd className="font-mono font-medium text-ink-800">
+                <dt className="text-nett-text-muted">Tokens</dt>
+                <dd className="font-mono font-medium text-nett-text">
                   {(meta.tokensEstimados ?? 0).toLocaleString('pt-BR')}
                 </dd>
               </div>
               <div className="flex items-start justify-between gap-3">
-                <dt className="text-ink-500">Tempo</dt>
-                <dd className="font-mono font-medium text-ink-800">
+                <dt className="text-nett-text-muted">Tempo</dt>
+                <dd className="font-mono font-medium text-nett-text">
                   {meta.duracaoMs ? `${(meta.duracaoMs / 1000).toFixed(1)} s` : '—'}
                 </dd>
               </div>
               {typeof meta.custoEstimadoUSD === 'number' && meta.custoEstimadoUSD > 0 ? (
                 <div className="flex items-start justify-between gap-3">
-                  <dt className="text-ink-500">Custo estimado</dt>
-                  <dd className="font-mono font-medium text-ink-800">US$ {meta.custoEstimadoUSD.toFixed(4)}</dd>
+                  <dt className="text-nett-text-muted">Custo estimado</dt>
+                  <dd className="font-mono font-medium text-nett-text">US$ {meta.custoEstimadoUSD.toFixed(4)}</dd>
                 </div>
               ) : null}
             </dl>
-            <p className="mt-3 flex items-start gap-2 border-t border-ink-100 pt-3 text-[11px] leading-relaxed text-ink-500">
+            <p className="mt-3 flex items-start gap-2 border-t border-nett-text-muted/10 pt-3 text-[11px] leading-relaxed text-nett-text-muted">
               <IconClock size={12} className="mt-0.5 shrink-0" />
               Relatório disponível neste link por 30 dias. O PDF enviado não é guardado.
             </p>

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { headers } from 'next/headers';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -31,12 +32,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0f172a',
+  themeColor: '#050505',
   width: 'device-width',
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // T-107: lê o cabeçalho para forçar renderização dinâmica; o Next aplica o nonce da CSP aos scripts.
+  await headers();
   return (
     <html lang="pt-BR">
       <body className="min-h-dvh antialiased">{children}</body>
