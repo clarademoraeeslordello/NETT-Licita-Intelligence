@@ -26,6 +26,7 @@ const pairs: Array<[string, PgTable, z.ZodObject]> = [
   ['search_profiles', s.searchProfiles, c.searchProfile],
   ['opportunity_trackings', s.opportunityTrackings, c.opportunityTracking],
   ['consultant_metrics', s.consultantMetrics, c.consultantMetric],
+  ['audit_events', s.auditEvents, c.auditEvent],
 ];
 
 for (const [name, table, contract] of pairs) {

@@ -57,7 +57,6 @@ npm run test:db          # integração (DATABASE_URL_TEST)
 
 | ID | Pendência | Responsável |
 | --- | --- | --- |
-| P-01 | Executar build/testes do snapshot e registrar resultado | agente 01 (T-004) |
 | P-02 | Validação jurídica do uso da base MIT em produto proprietário | humano |
 | P-04 | Aprovar provedores de IA, retenção de dados e orçamento (ADR-008) | humano |
 | P-05 | Aprovar criação/custo dos serviços Railway e Keycloak | humano |

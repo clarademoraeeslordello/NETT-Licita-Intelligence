@@ -38,6 +38,13 @@ Quem pode propor: qualquer agente (via PR neste arquivo). Quem aceita: agente 01
 - **Alternativas:** Auth.js v5 beta (menos código próprio, risco de API instável); v4 (manutenção, integração App Router mais frágil).
 - **Impacto:** ADR-005 mantida quanto a Keycloak e autorização no banco; muda só a biblioteca. Mudança de papel no Keycloak vale no próximo login (≤ 8 h).
 
+### ADR-016 — Endurecimento HTTP (T-107) · `aceita` (agente 01, 2026-11-15)
+- **CSP com nonce por requisição** em `src/middleware.ts` (`script-src 'self' 'nonce-…' 'strict-dynamic'`, `frame-ancestors 'none'`, `object-src 'none'`, `form-action` só `self` + Keycloak). Exige renderização dinâmica (`await headers()` no layout raiz): perde-se cache estático de páginas, aceitável pois todas serão autenticadas. `style-src 'unsafe-inline'` mantido (estilos inline do React/Tailwind); revisar quando o design system permitir. Exceção `'unsafe-inline'` só para `/api/jobs/*/report.html` herdado, removida em T-306.
+- **Cabeçalhos estáticos** em `next.config.ts`: HSTS (produção), `X-Frame-Options: DENY`, COOP, `Permissions-Policy`, `nosniff`; `X-Powered-By` removido.
+- **Limite de requisições no Postgres** (janela fixa, upsert atômico; funciona com várias instâncias): `/api/v1` 300/min por sessão (ou IP), `/api/auth/login|callback` 20/min por IP. Falha aberta se o banco cair.
+- **IP do cliente**: entrada de `X-Forwarded-For` na posição `TRUSTED_PROXY_HOPS` a partir do fim (padrão 1, Railway); só HMAC do IP é guardado. Sem XFF (local) todos compartilham o mesmo balde.
+- **Alternativas:** CSP com `'unsafe-inline'` (simples, sem proteção real contra XSS); Redis para limite (serviço extra).
+
 ### ADR-006 — Filas com pg-boss sobre o Postgres · `aceita`
 - **Decisão:** pg-boss no schema `pgboss` do mesmo banco. Contrato em `src/contracts/jobs.ts`.
 - **Alternativas:** Redis + BullMQ (mais um serviço); SQS (fora do Railway).

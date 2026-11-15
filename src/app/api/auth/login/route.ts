@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
 import { FLOW_COOKIE, FLOW_MAX_AGE_S, readAuthConfig } from '@/server/auth/config';
 import { startLogin } from '@/server/auth/oidc';
+import { enforceRateLimit } from '@/server/auth/next';
+import { RULES } from '@/server/http/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /** GET /api/auth/login?returnTo=/caminho — inicia o login no Keycloak. */
 export async function GET(request: Request) {
+  const limited = await enforceRateLimit(request, RULES.auth, 'ip');
+  if (limited) return limited;
   const cfg = readAuthConfig();
   const returnTo = new URL(request.url).searchParams.get('returnTo');
   const { redirectUrl, flowToken } = await startLogin(cfg, returnTo);
