@@ -109,7 +109,7 @@ export const company = (size: Company['size'] = 'DEMAIS'): Company => ({ id: IDS
 let capSeq = 100;
 export function capability(kind: CompanyCapability['kind'], name: string, over: Partial<CompanyCapability> = {}): CompanyCapability {
   capSeq += 1;
-  return { id: id(capSeq), companyId: IDS.company, kind, name, description: '', keywords: [], catalogCodes: [], ufs: [], maxContractValue: null, evidenceDocumentId: id(900), validUntil: null, active: true, createdAt: TS, updatedAt: TS, ...over };
+  return { id: id(capSeq), companyId: IDS.company, kind, subject: 'company', financialIndicators: null, name, description: '', keywords: [], catalogCodes: [], ufs: [], maxContractValue: null, evidenceDocumentId: id(900), validUntil: null, active: true, createdAt: TS, updatedAt: TS, ...over };
 }
 
 export function certificate(category: 'fiscal' | 'trabalhista', issuer: string, title: string, validUntil: string): Document {

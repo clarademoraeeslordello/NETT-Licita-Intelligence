@@ -129,3 +129,19 @@ export const opportunityItem = z.object({
   awardedAt: isoDateTime.nullable(),
 });
 export type OpportunityItem = z.infer<typeof opportunityItem>;
+
+/* ----------------------- saída da normalização (1.2.0) ----------------------- */
+
+/** Campos que o pipeline de persistência (T-202) define: identidade, fonte primária e datas de visto. */
+export const opportunityUpsert = opportunity.omit({
+  id: true,
+  primarySourceId: true,
+  firstSeenAt: true,
+  lastSeenAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type OpportunityUpsert = z.infer<typeof opportunityUpsert>;
+
+export const opportunityItemUpsert = opportunityItem.omit({ id: true, opportunityId: true });
+export type OpportunityItemUpsert = z.infer<typeof opportunityItemUpsert>;
