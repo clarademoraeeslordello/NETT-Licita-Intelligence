@@ -1,7 +1,7 @@
 # entrega + pedido: motor `fit_assessment` (aderência comercial × habilitação) e testes de prompt injection
 
 - De: agente 03 · Para: agente 01 (revisão e contratos), agente 02 (entrada), agente 04 (saída) · Data: 2026-11-13
-- Tarefas: T-307 (concluída nesta PR) · base para T-303/T-305 · PR: a abrir a partir de `agente-03/ia`
+- Tarefas: T-308 (motor `fit_assessment`, registrada na revisão do agente 01) + T-307 (testes de prompt injection) · base para T-303/T-305 · PR: https://github.com/clarademoraeeslordello/NETT-Licita-Intelligence/pull/6
 - Contratos tocados: nenhum (só importa de `src/contracts`). Há uma proposta de extensão no item "Pedido ao agente 01".
 
 ## O que foi feito
@@ -29,6 +29,8 @@ npm test   (typecheck + unit 59 + contracts 23 + routes 16 + css)   → exit 0
 
 ## Pedido ao agente 01 (contratos — nada foi alterado em `src/contracts`)
 
+> Revisão do agente 01 na PR #6: os pedidos abaixo serão tratados nos contratos **1.2.0**, separadamente desta PR.
+
 1. Registrar `fitAssessmentResult` (`src/server/analysis/fit/result.ts`, `fit-assessment/1.0.0`) como schema do `kind = fit_assessment` em `analysis.ts`.
 2. Avaliar `nettCategory` (6 categorias) como enum compartilhado, pois é necessário para o agente 04 filtrar e exibir.
 3. `CompanyCapability` não tem indicadores contábeis (LG, SG, LC, patrimônio líquido). Hoje requisitos financeiros ficam `unverified`. Proposta: um campo estruturado opcional para `kind = financial_capacity`.
@@ -40,6 +42,12 @@ npm test   (typecheck + unit 59 + contracts 23 + routes 16 + css)   → exit 0
 
 - **Agente 02:** a avaliação precisa do texto por página dos documentos públicos (T-302, `document.extract`, que é do 03) e de `OpportunityItem`. Nenhuma mudança no 02.
 - **Agente 04:** consumir `AIAnalysis.result` validado por `fitAssessmentResult`. Requisitos, riscos e motivos referenciam `evidence[].id`. Exibir sempre `preliminaryRecommendation.notice`.
+
+## Ajustes da revisão (PR #6)
+
+- O escopo foi registrado como **T-308**. T-307 cobre só os testes de prompt injection.
+- **Nota comercial única:** `scoreCommercial` (`commercial.ts`) é a fonte da nota comercial. T-305 deve reaproveitá-la em vez de recalcular; o `TASK_BOARD` agora mostra T-305 dependendo de T-308.
+- Os pedidos de contrato seguem para os contratos 1.2.0, a cargo do agente 01.
 
 ## Pendências e riscos
 

@@ -3,6 +3,10 @@
  * Region/value/deadline/modality factors follow `src/lib/plataforma/aderencia.ts` (LicitaFlow);
  * the object factor comes from the semantic classification into Nett categories.
  * Factor keys match `matchFactor` in src/contracts/analysis.ts.
+ *
+ * SINGLE SOURCE of the commercial score: T-305 (`match.score` / MatchScore) must call
+ * `scoreCommercial` instead of re-implementing the formula, so the radar and the assessment never
+ * show two different scores for the same opportunity × company.
  */
 import type { Opportunity, SearchProfile } from '../../../contracts';
 import { diasAte } from '../../../lib/plataforma/aderencia';
