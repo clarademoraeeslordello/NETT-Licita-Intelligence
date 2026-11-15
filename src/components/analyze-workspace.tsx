@@ -518,11 +518,6 @@ export function AnalyzeWorkspace({
           if ((event.target as HTMLElement).closest('button')) return;
           inputRef.current?.click();
         }}
-        onKeyDown={(event) => {
-          if (event.key !== 'Enter' && event.key !== ' ') return;
-          event.preventDefault();
-          inputRef.current?.click();
-        }}
         onDragOver={(event) => {
           event.preventDefault();
           setDragging(true);
@@ -538,9 +533,10 @@ export function AnalyzeWorkspace({
           setDragging(false);
           pickFile(event.dataTransfer.files?.[0]);
         }}
-        role="button"
-        tabIndex={0}
-        aria-label="Selecionar o arquivo PDF do edital"
+        // Zona de soltar (mouse). Teclado e leitor de tela usam os botões
+        // internos; a zona não é um controle para evitar nested-interactive.
+        role="group"
+        aria-label="Área de envio do PDF do edital"
         className={`mt-6 cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition ${
           dragging ? 'border-nett-gold bg-nett-gold/6' : 'border-nett-text-muted/15 bg-nett-black/60'
         }`}
@@ -604,6 +600,7 @@ export function AnalyzeWorkspace({
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
+              aria-label="Selecionar o arquivo PDF do edital"
               className="rounded-xl border border-nett-text-muted/15 bg-nett-surface px-4 py-2 text-sm font-medium text-nett-text transition hover:border-nett-text-muted/30 hover:bg-nett-black"
             >
               Selecionar arquivo
