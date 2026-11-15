@@ -63,6 +63,6 @@ Aplicação Next.js para **empresas fornecedoras** do governo: radar de editais 
 
 ## 5. Pendências da auditoria
 
-- **P-01** Executar `npm ci && npm test` e `npm run build` no snapshot e anexar resultado (agente 01, T-004).
+- **P-01** ~~Executar `npm ci && npm test` e `npm run build`~~ — concluída em 2026-11-15 (T-004): `npm test` exit 0 e `next build` ok, já com as mudanças de F1.
 - **P-02** Validação jurídica humana do uso da base MIT em produto proprietário.
 - **P-03** Confirmar com a responsável o modelo de negócio (multiempresa com consultores Nett atendendo várias empresas clientes) — premissa usada em `CONTRACTS.md`.

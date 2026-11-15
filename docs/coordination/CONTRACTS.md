@@ -1,6 +1,6 @@
 # CONTRACTS.md — contratos entre módulos
 
-- Versão: **1.0.0** · Status: **aprovado pela responsável humana em 2026-11-13**
+- Versão: **1.1.0** · Status: **aprovado** (1.0.0 pela responsável humana em 2026-11-13; 1.1.0 adiciona `AuditEvent`, compatível)
 - Fonte da verdade executável: `src/contracts/*.ts` (Zod). Este documento explica; o código manda. Divergência entre os dois = bug do agente 01.
 - Alteração: PR do agente 01 (ou proposta de outro agente via handoff) + atualização de `CONTRACTS_VERSION` + entrada em `DECISIONS.md` se quebrar compatibilidade.
 
@@ -35,6 +35,7 @@ Legenda: **W** = único módulo que escreve · **R** = quem lê.
 | `SearchProfile` | `company.ts` | por empresa | 03 (API) | 02 (filtro de fonte), 03, 04 |
 | `OpportunityTracking` (suporte, pipeline) | `company.ts` | por empresa | 04 (API) | 04, 01 |
 | `ConsultantMetric` | `metrics.ts` | por consultor (± empresa), derivado | 04 (job) | 04 |
+| `AuditEvent` (suporte, 1.1.0) | `audit.ts` | global, append-only | todos, **só** via `recordAudit()` | 01, `nett_admin` |
 | `Company`, `UserAccount`, `Membership` (suporte) | `tenancy.ts` | global / vínculo | 01 | todos |
 
 ### Invariantes que todo PR deve respeitar
@@ -124,9 +125,17 @@ export interface ObjectStorage {
   signedUrl(key: string, ttlSeconds: number): Promise<string>;   // ttl ≤ 600
 }
 
-// src/server/auth/guard.ts — agente 01
-export function requireSession(): Promise<Session>;
-export function requireCompanyAccess(session: Session, companyId: string, minRole: CompanyRole): Promise<void>;
+// src/server/auth (importar de '@/server/auth') — agente 01
+export function requireSession(): Promise<Session>;                       // 401 se ausente/expirada
+export function requireCompanyAccess(session: Session, companyId: string, minRole: CompanyRole): Promise<CompanyRole>; // 403
+export function requireRealmRole(session: Session, role: 'nett_admin' | 'nett_consultant'): void;
+export function withApi(handler): RouteHandler;  // obrigatório em toda rota /api/v1: erros → apiError, Origin, limite 300/min
+
+// src/server/audit — agente 01
+export function recordAudit(dbOrTx, input: AuditInput): Promise<void>;     // na MESMA transação da escrita de negócio
+export function recordAuditSafe(db, input: AuditInput): Promise<void>;      // só eventos de segurança, melhor esforço
+// Ações obrigatórias: criação/alteração de HumanReview, AIAnalysis solicitada, mudança de etapa do pipeline,
+// upload/download de documento privado, mudança de Membership. Formato: "dominio.acao".
 
 // src/server/jobs/enqueue.ts — agente 02
 export function enqueue<N extends JobName>(name: N, payload: JobPayload<N>): Promise<string>;
