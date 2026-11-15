@@ -7,6 +7,7 @@ export * from './tenancy';
 export * from './sources';
 export * from './documents';
 export * from './analysis';
+export * from './fit';
 export * from './company';
 export * from './metrics';
 export * from './jobs';

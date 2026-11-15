@@ -5,6 +5,7 @@
 import { z } from 'zod';
 import { analiseSchema } from '../lib/schema';
 import { decimal, isoDateTime, sha256, uuid } from './common';
+import { fitAssessmentResult } from './fit';
 
 /* ------------------------------- AIAnalysis ------------------------------ */
 
@@ -15,6 +16,20 @@ export const reviewStatus = z.enum(['pending_review', 'approved', 'approved_with
 
 /** Resultado por tipo. `tender_summary` reaproveita o schema de evidências do LicitaFlow (found/inferred/not_found). */
 export const tenderSummaryResult = analiseSchema;
+
+/**
+ * Schema do `result` por `kind` (1.2.0). Toda escrita de AIAnalysis.result passa por `parseAnalysisResult`.
+ * `risk_review` ainda não tem formato definido: aceita qualquer JSON até um contrato próprio.
+ */
+export const analysisResultSchemas = {
+  tender_summary: tenderSummaryResult,
+  fit_assessment: fitAssessmentResult,
+  risk_review: z.unknown(),
+} as const satisfies Record<z.infer<typeof analysisKind>, z.ZodType>;
+
+export function parseAnalysisResult<K extends keyof typeof analysisResultSchemas>(kind: K, value: unknown) {
+  return analysisResultSchemas[kind].safeParse(value);
+}
 
 export const aiAnalysis = z.object({
   id: uuid,

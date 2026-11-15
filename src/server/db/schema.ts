@@ -67,6 +67,7 @@ export const reviewStatusEnum = fromZod('review_status', c.reviewStatus.options)
 export const reviewSubjectEnum = fromZod('review_subject', c.reviewSubject.options);
 export const reviewDecisionEnum = fromZod('review_decision', c.reviewDecision.options);
 export const capabilityKindEnum = fromZod('capability_kind', c.capabilityKind.options);
+export const capabilitySubjectEnum = fromZod('capability_subject', c.capabilitySubject.options);
 export const alertChannelEnum = fromZod('alert_channel', c.searchProfile.shape.alertChannel.options);
 export const pipelineStageEnum = fromZod('pipeline_stage', c.pipelineStage.options);
 export const trackingOutcomeEnum = fromZod('tracking_outcome', ['won', 'lost', 'withdrawn']);
@@ -228,6 +229,7 @@ export const companyCapabilities = pgTable('company_capabilities', {
   id: id(),
   companyId: uuid('company_id').notNull().references(() => companies.id, { onDelete: 'cascade' }),
   kind: capabilityKindEnum('kind').notNull(),
+  subject: capabilitySubjectEnum('subject').notNull().default('company'),
   name: text('name').notNull(),
   description: text('description').notNull().default(''),
   keywords: text('keywords').array().notNull().default(sql`'{}'::text[]`),
@@ -237,8 +239,11 @@ export const companyCapabilities = pgTable('company_capabilities', {
   evidenceDocumentId: uuid('evidence_document_id'),
   validUntil: date('valid_until'),
   active: boolean('active').notNull().default(true),
+  financialIndicators: jsonb('financial_indicators').$type<c.FinancialIndicators>(),
   ...timestamps,
 }, (t) => [
+  check('company_capabilities_financial_kind', sql`${t.financialIndicators} is null or ${t.kind} = 'financial_capacity'`),
+  check('company_capabilities_professional_kind', sql`${t.subject} = 'company' or ${t.kind} in ('certification', 'technical_attestation')`),
   foreignKey({ name: 'company_capabilities_evidence_fk', columns: [t.evidenceDocumentId, t.companyId], foreignColumns: [documents.id, documents.companyId] }),
   index('company_capabilities_company_idx').on(t.companyId),
 ]);

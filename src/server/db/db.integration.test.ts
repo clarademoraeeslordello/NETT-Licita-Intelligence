@@ -107,3 +107,15 @@ test('consultant_metrics: período único mesmo com companyId nulo', async () =>
 test('aplicação não tem privilégio de DDL', async () => {
   await rejectsWith(() => db.execute(sql`create table ddl_proibido (id int)`), /permission denied/);
 });
+
+test('capacidades (1.2.0): professional só em certificação/atestado; indicadores só em financial_capacity', async () => {
+  const base = { companyId: companyA, name: 'cap' };
+  await rejectsWith(() => db.insert(s.companyCapabilities).values({ ...base, kind: 'product', subject: 'professional' }), /company_capabilities_professional_kind/);
+  const fin = { referenceDate: '2025-12-31', currentLiquidity: '1.5000', generalLiquidity: '1.2000', generalSolvency: '1.1000', netWorth: '250000.00' };
+  await rejectsWith(() => db.insert(s.companyCapabilities).values({ ...base, kind: 'license', financialIndicators: fin }), /company_capabilities_financial_kind/);
+  const [prof] = await db.insert(s.companyCapabilities).values({ ...base, kind: 'certification', subject: 'professional' }).returning();
+  assert.equal(prof.subject, 'professional');
+  const [f] = await db.insert(s.companyCapabilities).values({ ...base, kind: 'financial_capacity', financialIndicators: fin }).returning();
+  assert.equal(f.subject, 'company', 'padrão company');
+  assert.equal(f.financialIndicators?.netWorth, '250000.00');
+});

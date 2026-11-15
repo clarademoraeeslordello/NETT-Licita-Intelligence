@@ -17,23 +17,48 @@ export const capabilityKind = z.enum([
   'financial_capacity',
 ]);
 
-export const companyCapability = z.object({
-  id: uuid,
-  companyId: uuid,
-  kind: capabilityKind,
-  name: z.string().min(1),
-  description: z.string(),
-  keywords: z.array(z.string().min(1)),
-  /** Códigos CATMAT/CATSER quando conhecidos. */
-  catalogCodes: z.array(z.string()),
-  ufs: z.array(uf),
-  maxContractValue: decimal.nullable(),
-  /** Documento que comprova (atestado, certidão, licença). */
-  evidenceDocumentId: uuid.nullable(),
-  validUntil: isoDate.nullable(),
-  active: z.boolean(),
-  ...timestamps,
+/** Quem possui a capacidade: a empresa ou um profissional dela (certificação pessoal, ex.: EXIN PDPF). */
+export const capabilitySubject = z.enum(['company', 'professional']);
+
+/** Indicadores contábeis exigidos em habilitação econômico-financeira. Decimais em string. */
+export const financialIndicators = z.object({
+  /** Fim do exercício a que os indicadores se referem. */
+  referenceDate: isoDate,
+  currentLiquidity: decimal.nullable(),
+  generalLiquidity: decimal.nullable(),
+  generalSolvency: decimal.nullable(),
+  netWorth: decimal.nullable(),
 });
+export type FinancialIndicators = z.infer<typeof financialIndicators>;
+
+export const companyCapability = z
+  .object({
+    id: uuid,
+    companyId: uuid,
+    kind: capabilityKind,
+    /** 1.2.0. `professional` só faz sentido para `certification`/`technical_attestation`. */
+    subject: capabilitySubject,
+    name: z.string().min(1),
+    description: z.string(),
+    keywords: z.array(z.string().min(1)),
+    /** Códigos CATMAT/CATSER quando conhecidos. */
+    catalogCodes: z.array(z.string()),
+    ufs: z.array(uf),
+    maxContractValue: decimal.nullable(),
+    /** Documento que comprova (atestado, certidão, licença). */
+    evidenceDocumentId: uuid.nullable(),
+    validUntil: isoDate.nullable(),
+    active: z.boolean(),
+    /** 1.2.0. Preenchido somente quando kind = 'financial_capacity'. */
+    financialIndicators: financialIndicators.nullable(),
+    ...timestamps,
+  })
+  .refine((c) => c.financialIndicators === null || c.kind === 'financial_capacity', {
+    message: 'financialIndicators só vale para kind = financial_capacity',
+  })
+  .refine((c) => c.subject === 'company' || c.kind === 'certification' || c.kind === 'technical_attestation', {
+    message: "subject 'professional' só vale para certification ou technical_attestation",
+  });
 export type CompanyCapability = z.infer<typeof companyCapability>;
 
 /* ----------------------------- SearchProfile ----------------------------- */
@@ -71,7 +96,7 @@ export type SearchProfile = z.infer<typeof searchProfile>;
 export const pipelineStage = z.enum(['triage', 'analysis', 'documentation', 'proposal', 'dispute', 'result']);
 
 export const opportunityTracking = z.object({
-  id: uuid,
+    id: uuid,
   companyId: uuid,
   opportunityId: uuid,
   stage: pipelineStage,

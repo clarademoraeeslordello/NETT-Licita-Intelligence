@@ -45,6 +45,23 @@ Quem pode propor: qualquer agente (via PR neste arquivo). Quem aceita: agente 01
 - **IP do cliente**: entrada de `X-Forwarded-For` na posição `TRUSTED_PROXY_HOPS` a partir do fim (padrão 1, Railway); só HMAC do IP é guardado. Sem XFF (local) todos compartilham o mesmo balde.
 - **Alternativas:** CSP com `'unsafe-inline'` (simples, sem proteção real contra XSS); Redis para limite (serviço extra).
 
+### ADR-017 — Autoridade do agente 01 sobre merge, deploy e coordenação · `aceita` (responsável humana, 2026-11-15)
+- **Decisão (da responsável):** a comunicação interna entre os agentes é aprovada, sem necessidade de aprovação humana. O agente 01 é o principal responsável; os demais seguem suas recomendações; **somente o 01**, após analisar, faz ou encaminha merge e deploy.
+- **Aplicação:** agentes 02–04 abrem PR, registram handoff e pedem o merge; o 01 revisa código e testes reais, resolve conflitos por merge da `main` na branch (sem rebase nem force-push) e mescla. Dependências, migrations e contratos passam pela análise do 01 e dispensam aprovação humana adicional.
+- **Limites mantidos** (política Nett em AGENTS.md): despesas e serviços pagos, aceite de termos, escolha/orçamento do provedor de IA, dados de produção irreversíveis, decisões de impacto legal ou de direitos. Estes continuam com a responsável. Interpretação do 01: a frase "merge e deploy" cobre a execução técnica, não gasto novo; qualquer criação de recurso pago no Railway será confirmada antes.
+- **Rastro:** cada merge fica no histórico da PR com a evidência da revisão; ações de agentes seguem o registro de auditoria proporcional ao risco.
+
+### ADR-018 — Situação da oportunidade derivada na leitura · `aceita` (agente 01, 2026-11-15)
+- **Contexto:** `normalize` do conector é puro (sem relógio) e grava `status = published`; `receiving_proposals`/`closed` dependem da data atual.
+- **Decisão:** o campo `Opportunity.status` guarda só o que a fonte informa (`published`, `awarded`, `cancelled`, `suspended`, `unknown`). A situação efetiva para exibição e filtro é calculada na leitura por uma função única `effectiveStatus(opportunity, now)` (fuso America/Sao_Paulo): `published` com `proposalsCloseAt` futuro → `receiving_proposals`; passado → `closed`. Filtros de listagem usam a mesma regra em SQL.
+- **Alternativa recusada:** job que atualiza o status (estado duplicado, atraso entre o job e o relógio, mais um writer em `opportunities`).
+- **Impacto:** agente 02 implementa `effectiveStatus` e o filtro SQL em T-204; agente 04 só consome. Sem migration.
+
+### ADR-019 — Contratos 1.2.0 (pedidos dos agentes 02 e 03) · `aceita` (agente 01, 2026-11-15)
+- **Aceitos:** (1) `fitAssessmentResult` como schema do kind `fit_assessment`, em `src/contracts/fit.ts`, movido sem mudança de formato; (2) `nettCategory` como enum compartilhado; (3) `CompanyCapability.financialIndicators` (LC, LG, SG, patrimônio líquido, data-base) só para `financial_capacity`; (4) `CompanyCapability.subject` (`company` | `professional`), `professional` só em certificação/atestado; (5) interface do motor `fit_assessment` documentada à parte de `AnalysisEngine` (precisa de dados da empresa); (6) script `test:analysis` no `npm test` e no CI; (7) upserts e `documentRef` do agente 02 em `src/contracts`.
+- **Compatibilidade:** mudança aditiva. Migration 0005 adiciona `subject` (padrão `company`) e `financial_indicators`, com checks no banco. Código dos agentes 02 e 03 reexporta dos contratos; único ajuste de fixture: `capability()` do agente 03 ganhou os dois campos novos.
+- **`completeCapabilityKinds`** (opção de execução do agente 03) fica fora do banco, como ele propôs.
+
 ### ADR-006 — Filas com pg-boss sobre o Postgres · `aceita`
 - **Decisão:** pg-boss no schema `pgboss` do mesmo banco. Contrato em `src/contracts/jobs.ts`.
 - **Alternativas:** Redis + BullMQ (mais um serviço); SQS (fora do Railway).
