@@ -24,8 +24,8 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | T-102 | 01 | docker compose local: Keycloak (realm importável), S3 (SeaweedFS), Postgres opcional (profile) | — | em revisão | `npm run infra:up` sobe tudo; realm com usuários fictícios |
 | T-103 | 01 | Auth.js + Keycloak, `requireSession`, `requireCompanyAccess`, provisionamento no 1º login | T-101, T-102 | pronta | testes: sem sessão → 401; outra empresa → 403 |
 | T-104 | 04 | Tema de login Keycloak na paleta Nett | T-102 | bloqueada | screenshot + auditoria de cores |
-| T-105 | 02 | pg-boss: `worker/index.ts`, registro de handlers, `enqueue` tipado | T-101 | pronta | teste: job enfileirado é processado e idempotente |
-| T-106 | 02 | `ObjectStorage` S3 + URL assinada | T-102 | pronta | teste de integração com o S3 local (SeaweedFS) |
+| T-105 | 02 | pg-boss: `worker/index.ts`, registro de handlers, `enqueue` tipado | T-101 | em revisão | teste: job enfileirado é processado e idempotente |
+| T-106 | 02 | `ObjectStorage` S3 + URL assinada | T-102 | em revisão (falta evidência SeaweedFS) | teste de integração com o S3 local (SeaweedFS) |
 | T-107 | 01 | Headers de segurança (CSP, HSTS), rate limit por usuário | T-103 | bloqueada | teste de headers |
 | T-108 | 01 | `AuditEvent` + `recordAudit()` | T-101 | pronta | escrita append-only testada |
 | T-109 | 03 | Quota de IA por empresa (substitui `arremate.usos`) | T-101, T-007 | bloqueada | teste de limite e estorno |
@@ -34,7 +34,7 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 
 | ID | Tarefa | Depende de | Status |
 | --- | --- | --- | --- |
-| T-201 | `SourceConnector` PNCP sobre `src/lib/pncp/client.ts` (mantendo backoff/disjuntor) | T-003 | pronta [livre — só a camada de cliente/normalização pura, sem banco] |
+| T-201 | `SourceConnector` PNCP sobre `src/lib/pncp/client.ts` (mantendo backoff/disjuntor) | T-003 | em revisão |
 | T-202 | `source.sync` + `source.normalize` persistindo SourceRecord → Opportunity/Item/Document | T-101, T-105 | bloqueada |
 | T-203 | `document.fetch` (download com limite de tamanho, MIME, sem SSRF) | T-106, T-202 | bloqueada |
 | T-204 | Rotas `/api/v1/opportunities*`, `/sources`, `/prices` | T-103, T-202 | bloqueada |

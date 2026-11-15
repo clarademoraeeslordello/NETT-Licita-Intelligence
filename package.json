@@ -21,12 +21,22 @@
     "db:migrate": "tsx scripts/db/migrate.ts",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
-    "db:setup": "npm run db:bootstrap && npm run db:migrate"
+    "db:setup": "npm run db:bootstrap && npm run db:migrate",
+    "worker": "tsx worker/index.ts",
+    "jobs:setup": "tsx src/server/jobs/setup.ts",
+    "test:jobs": "tsx --test src/server/jobs/jobs.integration.test.ts",
+    "test:storage": "tsx --test src/server/storage/storage.test.ts",
+    "test:storage:integration": "tsx --test src/server/storage/storage.integration.test.ts",
+    "test:sources": "tsx --test src/server/sources/pncp/pncp.test.ts",
+    "test:sources:live": "tsx --test src/server/sources/pncp/pncp.live.test.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1169.0",
+    "@aws-sdk/s3-request-presigner": "^3.1169.0",
     "drizzle-orm": "^0.45.3",
     "next": "^15.5.25",
     "pg": "^8.23.0",
+    "pg-boss": "^12.38.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "unpdf": "^1.8.1",

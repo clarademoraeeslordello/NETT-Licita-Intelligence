@@ -10,6 +10,7 @@
  */
 import { AppError } from '../errors';
 import { pncpGet } from './client';
+import { abrirDisjuntorConsulta, consultaBloqueada } from './disjuntor';
 import type { ArquivoCompra, CompraDetalhe, ItemCompra, Oportunidade, ResultadoItem } from './types';
 
 export { MODALIDADES } from './modalidades';
@@ -161,16 +162,10 @@ type CompraRaw = {
   orcamentoSigilosoCodigo?: number | null;
 };
 
-/**
- * Disjuntor do endpoint /consulta: ele responde 429 com facilidade e, depois
- * disso, deixa as conexões penduradas por minutos. Após uma falha, paramos de
- * chamá-lo por um tempo e a interface segue com os dados da busca + itens.
- */
-const disjuntor = globalThis as unknown as { __pncpConsultaBloqueadaAte?: number };
-const PAUSA_CONSULTA_MS = 5 * 60_000;
+/* Disjuntor do /consulta: ver ./disjuntor (compartilhado com o conector do worker). */
 
 export async function obterCompra(cnpj: string, ano: string, sequencial: string): Promise<CompraDetalhe & { oportunidade: Oportunidade }> {
-  if ((disjuntor.__pncpConsultaBloqueadaAte ?? 0) > Date.now()) {
+  if (consultaBloqueada()) {
     throw new AppError('PNCP_UNAVAILABLE', 'Detalhe da compra temporariamente indisponível no PNCP.', { status: 503 });
   }
   let raw: CompraRaw;
@@ -182,7 +177,7 @@ export async function obterCompra(cnpj: string, ano: string, sequencial: string)
     });
   } catch (error) {
     if (!(error instanceof AppError && error.code === 'NOT_FOUND')) {
-      disjuntor.__pncpConsultaBloqueadaAte = Date.now() + PAUSA_CONSULTA_MS;
+      abrirDisjuntorConsulta();
     }
     throw error;
   }
