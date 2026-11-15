@@ -136,8 +136,6 @@ const PALETA = ['#050505', '#0D0D0D', '#111111', '#C9A227', '#F0D375', '#8A6D1A'
  * arquivo listado ficar limpo (para a entrada ser removida).
  */
 const PENDENCIAS_FORA_DA_AREA = new Map([
-  ['src/app/layout.tsx', 'agente 01 (themeColor)'],
-  ['src/app/icon.svg', 'agente 01 (favicon)'],
   ['src/app/api/jobs/[id]/report.html/route.ts', 'agente 03 (rota legada do relatório)'],
   ['src/lib/report/document.ts', 'agente 03 (relatório PDF/HTML)'],
 ]);
