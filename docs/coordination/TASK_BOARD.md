@@ -35,7 +35,7 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | ID | Tarefa | Depende de | Status |
 | --- | --- | --- | --- |
 | T-201 | `SourceConnector` PNCP sobre `src/lib/pncp/client.ts` (mantendo backoff/disjuntor) | T-003 | em revisão |
-| T-202 | `source.sync` + `source.normalize` persistindo SourceRecord → Opportunity/Item/Document | T-101, T-105 | bloqueada |
+| T-202 | `source.sync` + `source.normalize` persistindo SourceRecord → Opportunity/Item/Document | T-101, T-105 | em revisão |
 | T-203 | `document.fetch` (download com limite de tamanho, MIME, sem SSRF) | T-106, T-202 | bloqueada |
 | T-204 | Rotas `/api/v1/opportunities*`, `/sources`, `/prices` | T-103, T-202 | bloqueada |
 

@@ -32,7 +32,8 @@
     "test:storage": "tsx --test src/server/storage/storage.test.ts",
     "test:storage:integration": "tsx --test src/server/storage/storage.integration.test.ts",
     "test:sources": "tsx --test src/server/sources/pncp/pncp.test.ts",
-    "test:sources:live": "tsx --test src/server/sources/pncp/pncp.live.test.ts"
+    "test:sources:live": "tsx --test src/server/sources/pncp/pncp.live.test.ts",
+    "test:sources:integration": "tsx --test src/server/sources/sources.integration.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1169.0",
