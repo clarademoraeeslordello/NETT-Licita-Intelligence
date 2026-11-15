@@ -11,7 +11,7 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: admin
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin_local
       KC_HEALTH_ENABLED: "true"
-    ports: ["127.0.0.1:8180:8180"]
+    ports: ["127.0.0.1:8180:8180", "127.0.0.1:9000:9000"]
     volumes:
       - ./docker/keycloak/realm-nett.json:/opt/keycloak/data/import/realm-nett.json:ro
       - keycloak-data:/opt/keycloak/data

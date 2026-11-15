@@ -30,8 +30,7 @@ import * as c from '../../contracts';
 
 /* -------------------------------- helpers -------------------------------- */
 
-type Tuple = [string, ...string[]];
-const fromZod = (name: string, values: readonly string[]) => pgEnum(name, values as unknown as Tuple);
+const fromZod = <V extends string>(name: string, values: readonly V[]) => pgEnum(name, values as unknown as [V, ...V[]]);
 
 const id = () => uuid('id').primaryKey().defaultRandom();
 const tz = (name: string) => timestamp(name, { withTimezone: true });
@@ -381,3 +380,57 @@ export const consultantMetrics = pgTable('consultant_metrics', {
 }, (t) => [
   unique('consultant_metrics_period_uq').on(t.consultantUserId, t.companyId, t.granularity, t.periodStart).nullsNotDistinct(),
 ]);
+
+/* ------------------------------- sessões --------------------------------- */
+
+/**
+ * Sessão de aplicação (T-103). Suporte, não é entidade canônica.
+ * O cookie carrega um token aleatório; o banco guarda só o SHA-256 (vazamento do banco não reabre sessões).
+ * Papéis globais do Keycloak são fotografados no login; a sessão expira em no máximo 8 h.
+ */
+export const sessions = pgTable('sessions', {
+  id: id(),
+  tokenHash: text('token_hash').notNull().unique(),
+  userId: uuid('user_id').notNull().references(() => userAccounts.id, { onDelete: 'cascade' }),
+  realmRoles: text('realm_roles').array().notNull().default(sql`'{}'::text[]`),
+  createdAt: tz('created_at').notNull().defaultNow(),
+  lastSeenAt: tz('last_seen_at').notNull().defaultNow(),
+  expiresAt: tz('expires_at').notNull(),
+  revokedAt: tz('revoked_at'),
+}, (t) => [index('sessions_user_idx').on(t.userId), check('sessions_token_hash', sql`${t.tokenHash} ~ '^[a-f0-9]{64}$'`)]);
+
+/* ------------------------------- auditoria ------------------------------- */
+
+export const auditActorTypeEnum = fromZod('audit_actor_type', c.auditActorType.options);
+export const auditOutcomeEnum = fromZod('audit_outcome', c.auditOutcome.options);
+
+/** Append-only (trigger + REVOKE na migration 0004). T-108. */
+export const auditEvents = pgTable('audit_events', {
+  id: id(),
+  occurredAt: tz('occurred_at').notNull().defaultNow(),
+  actorType: auditActorTypeEnum('actor_type').notNull(),
+  actorUserId: uuid('actor_user_id').references(() => userAccounts.id),
+  companyId: uuid('company_id').references(() => companies.id),
+  action: text('action').notNull(),
+  entityType: text('entity_type'),
+  entityId: text('entity_id'),
+  outcome: auditOutcomeEnum('outcome').notNull(),
+  ipHash: text('ip_hash'),
+  requestId: text('request_id'),
+  metadata: jsonb('metadata').$type<Record<string, unknown>>().notNull().default({}),
+}, (t) => [
+  check('audit_events_action_format', sql`${t.action} ~ '^[a-z][a-z_]*(\\.[a-z][a-z_]*)+$'`),
+  check('audit_events_metadata_size', sql`pg_column_size(${t.metadata}) <= 8192`),
+  index('audit_events_occurred_idx').on(t.occurredAt),
+  index('audit_events_company_idx').on(t.companyId, t.occurredAt),
+  index('audit_events_actor_idx').on(t.actorUserId, t.occurredAt),
+]);
+
+/* ------------------------------ rate limit ------------------------------- */
+
+/** Contador por janela fixa (T-107). Chave já vem com hash; nunca IP/token em claro. */
+export const rateLimitBuckets = pgTable('rate_limit_buckets', {
+  key: text('key').notNull(),
+  windowStart: tz('window_start').notNull(),
+  count: integer('count').notNull().default(0),
+}, (t) => [primaryKey({ columns: [t.key, t.windowStart] }), index('rate_limit_buckets_window_idx').on(t.windowStart)]);

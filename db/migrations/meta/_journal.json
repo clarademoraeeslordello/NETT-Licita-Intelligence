@@ -15,6 +15,27 @@
       "when": 1794611021696,
       "tag": "0001_integrity_and_grants",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794612001947,
+      "tag": "0002_sessions",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794744548837,
+      "tag": "0003_audit_and_rate_limit",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794744549836,
+      "tag": "0004_audit_append_only",
+      "breakpoints": true
     }
   ]
 }
