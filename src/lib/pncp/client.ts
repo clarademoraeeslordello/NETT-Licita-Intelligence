@@ -42,11 +42,26 @@ function remember(key: string, value: unknown, ttlMs: number): void {
   state.cache.set(key, { expiresAt: Date.now() + ttlMs, value });
 }
 
+/**
+ * Espaçamento mínimo entre requisições ao PNCP neste processo (respeito ao limite da fonte).
+ * Padrão 0 (comportamento herdado); o worker de sincronização define `PNCP_MIN_INTERVAL_MS`.
+ */
+const espacamento = globalThis as unknown as { __pncpProximoInicio?: number };
+async function aguardarVez(): Promise<void> {
+  const intervalo = Number(process.env.PNCP_MIN_INTERVAL_MS ?? 0);
+  if (!(intervalo > 0)) return;
+  const agora = Date.now();
+  const inicio = Math.max(agora, espacamento.__pncpProximoInicio ?? 0);
+  espacamento.__pncpProximoInicio = inicio + intervalo;
+  if (inicio > agora) await sleep(inicio - agora);
+}
+
 async function request<T>(url: string, timeoutMs: number, retries: number): Promise<T> {
   let lastError: unknown;
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     if (attempt > 0) await sleep(400 * 2 ** (attempt - 1) + Math.random() * 250);
+    await aguardarVez();
 
     try {
       const response = await fetch(url, {
