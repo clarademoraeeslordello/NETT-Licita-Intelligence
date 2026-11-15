@@ -24,17 +24,17 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | T-102 | 01 | docker compose local: Keycloak (realm importável), S3 (SeaweedFS), Postgres opcional (profile) | — | concluída (PR #3) | `npm run infra:up` sobe tudo; realm com usuários fictícios |
 | T-103 | 01 | OIDC Keycloak (openid-client, ADR-005a), sessões no Postgres, `requireSession`, `requireCompanyAccess`, `withApi`, provisionamento no 1º login | T-101, T-102 | concluída (PR #4) | testes: sem sessão → 401; outra empresa → 403 |
 | T-104 | 04 | Tema de login Keycloak na paleta Nett | T-102 | pronta | screenshot + auditoria de cores |
-| T-105 | 02 | pg-boss: `worker/index.ts`, registro de handlers, `enqueue` tipado | T-101 | em revisão (PR #8) | teste: job enfileirado é processado e idempotente |
-| T-106 | 02 | `ObjectStorage` S3 + URL assinada | T-102 | em revisão (PR #8) | teste de integração com o S3 local (SeaweedFS) |
-| T-107 | 01 | Headers de segurança (CSP com nonce, HSTS), rate limit no Postgres (sessão/IP) | T-103 | em revisão | teste de headers |
-| T-108 | 01 | `AuditEvent` + `recordAudit()` | T-101 | em revisão | escrita append-only testada |
+| T-105 | 02 | pg-boss: `worker/index.ts`, registro de handlers, `enqueue` tipado | T-101 | concluída (PR #8) | teste: job enfileirado é processado e idempotente |
+| T-106 | 02 | `ObjectStorage` S3 + URL assinada | T-102 | concluída (PR #8) | teste de integração com o S3 local (SeaweedFS) |
+| T-107 | 01 | Headers de segurança (CSP com nonce, HSTS), rate limit no Postgres (sessão/IP) | T-103 | concluída (PR #7) | teste de headers |
+| T-108 | 01 | `AuditEvent` + `recordAudit()` | T-101 | concluída (PR #7) | escrita append-only testada |
 | T-109 | 03 | Quota de IA por empresa (substitui `arremate.usos`) | T-101, T-007 | bloqueada | teste de limite e estorno |
 
 ## Fase 2 — Fontes (agente 02)
 
 | ID | Tarefa | Depende de | Status |
 | --- | --- | --- | --- |
-| T-201 | `SourceConnector` PNCP sobre `src/lib/pncp/client.ts` (mantendo backoff/disjuntor) | T-003 | em revisão |
+| T-201 | `SourceConnector` PNCP sobre `src/lib/pncp/client.ts` (mantendo backoff/disjuntor) | T-003 | concluída (PR #8; enriquecimento ao vivo pendente: PNCP /pncp/v1 indisponível no teste) |
 | T-202 | `source.sync` + `source.normalize` persistindo SourceRecord → Opportunity/Item/Document | T-101, T-105 | bloqueada |
 | T-203 | `document.fetch` (download com limite de tamanho, MIME, sem SSRF) | T-106, T-202 | bloqueada |
 | T-204 | Rotas `/api/v1/opportunities*`, `/sources`, `/prices` | T-103, T-202 | bloqueada |
