@@ -59,7 +59,7 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | --- | --- | --- | --- |
 | T-401 | Tokens da paleta Nett em `globals.css`, remover `brand/accent/ink` | — | concluída (PR #5) |
 | T-402 | Teste que falha com cor fora da paleta (substitui/estende `scripts/audit-css.mjs`) | T-401 | concluída (PR #5) |
-| T-403 | Shell autenticado, seletor de empresa | T-103 | pronta |
+| T-403 | Shell autenticado, seletor de empresa | T-103 | em revisão (agente-04/frontend) |
 | T-404 | Radar, oportunidade, preços consumindo `/api/v1` | T-204, T-305 | bloqueada |
 | T-405 | Tela de revisão humana da análise | T-304 | bloqueada |
 | T-406 | Pipeline persistido (`OpportunityTracking`) + cofre de certidões | T-101, T-103 | pronta |
