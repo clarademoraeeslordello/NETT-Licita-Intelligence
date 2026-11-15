@@ -57,6 +57,11 @@ Quem pode propor: qualquer agente (via PR neste arquivo). Quem aceita: agente 01
 - **Alternativa recusada:** job que atualiza o status (estado duplicado, atraso entre o job e o relógio, mais um writer em `opportunities`).
 - **Impacto:** agente 02 implementa `effectiveStatus` e o filtro SQL em T-204; agente 04 só consome. Sem migration.
 
+### ADR-019 — Contratos 1.2.0 (pedidos dos agentes 02 e 03) · `aceita` (agente 01, 2026-11-15)
+- **Aceitos:** (1) `fitAssessmentResult` como schema do kind `fit_assessment`, em `src/contracts/fit.ts`, movido sem mudança de formato; (2) `nettCategory` como enum compartilhado; (3) `CompanyCapability.financialIndicators` (LC, LG, SG, patrimônio líquido, data-base) só para `financial_capacity`; (4) `CompanyCapability.subject` (`company` | `professional`), `professional` só em certificação/atestado; (5) interface do motor `fit_assessment` documentada à parte de `AnalysisEngine` (precisa de dados da empresa); (6) script `test:analysis` no `npm test` e no CI; (7) upserts e `documentRef` do agente 02 em `src/contracts`.
+- **Compatibilidade:** mudança aditiva. Migration 0005 adiciona `subject` (padrão `company`) e `financial_indicators`, com checks no banco. Código dos agentes 02 e 03 reexporta dos contratos; único ajuste de fixture: `capability()` do agente 03 ganhou os dois campos novos.
+- **`completeCapabilityKinds`** (opção de execução do agente 03) fica fora do banco, como ele propôs.
+
 ### ADR-006 — Filas com pg-boss sobre o Postgres · `aceita`
 - **Decisão:** pg-boss no schema `pgboss` do mesmo banco. Contrato em `src/contracts/jobs.ts`.
 - **Alternativas:** Redis + BullMQ (mais um serviço); SQS (fora do Railway).

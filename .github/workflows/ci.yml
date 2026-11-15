@@ -12,6 +12,7 @@ on:
       - 'src/app/api/auth/**'
       - 'src/server/jobs/**'
       - 'src/server/audit/**'
+      - 'src/server/analysis/**'
       - 'src/server/http/**'
       - 'src/server/storage/**'
       - 'src/server/sources/**'
@@ -59,6 +60,7 @@ jobs:
       - run: npm run test:contracts
       - run: npm run test:auth
       - run: npm run test:http
+      - run: npm run test:analysis
       - run: npm run test:storage
       - run: npm run test:sources
       - run: npm run test:unit

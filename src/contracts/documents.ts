@@ -62,3 +62,19 @@ export const document = z
     message: 'documento precisa de companyId ou opportunityId',
   });
 export type Document = z.infer<typeof document>;
+
+/**
+ * Referência a documento público da fonte, antes do download (1.2.0). `document` tem refinements
+ * (Zod 4 não permite `.pick`), por isso a derivação usa `.shape`. T-203 baixa, mede e armazena.
+ */
+export const documentRef = z.object({
+  /** Identificador do documento na fonte (ex.: sequencialDocumento do PNCP). */
+  externalId: z.string().min(1),
+  kind: document.shape.kind,
+  title: document.shape.title,
+  sourceUrl: z.url(),
+  /** Inferido pelo nome; confirmado no download. */
+  mimeType: document.shape.mimeType,
+  publishedAt: document.shape.fetchedAt,
+});
+export type DocumentRef = z.infer<typeof documentRef>;

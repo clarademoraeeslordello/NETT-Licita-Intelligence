@@ -11,6 +11,7 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | T-001 | Auditoria do LicitaFlow | concluída | `docs/architecture/audit-licitaflow.md` |
 | T-002 | Arquitetura alvo | concluída (proposta) | `docs/architecture/target-architecture.md` |
 | T-003 | Contratos v1 (Zod + doc) | concluída (aprovados 2026-11-13) | `src/contracts/`, `CONTRACTS.md`; 7 testes passando |
+| T-009 | Contratos 1.2.0 (pedidos dos agentes 02 e 03) | concluída (2026-11-15) | `src/contracts/fit.ts`, migration 0005, ADR-019; `npm test` exit 0 |
 | T-004 | Rodar build/testes do snapshot e anexar resultado (P-01) | concluída (2026-11-15) | `npm test` exit 0 (59 unidade herdados, 16 rotas, CSS); `next build` ok — ver handoff T-107/T-108 |
 | T-005 | CI sob demanda (alto impacto + manual) + template de PR | concluída (PR #3) | `.github/workflows/ci.yml` |
 | T-006 | Aprovação humana: contratos v1 e ADRs | concluída (2026-11-13) | aprovação na conversa com a responsável |

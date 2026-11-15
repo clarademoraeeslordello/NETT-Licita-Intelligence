@@ -1,6 +1,7 @@
 # CONTRACTS.md — contratos entre módulos
 
-- Versão: **1.1.0** · Status: **aprovado** (1.0.0 pela responsável humana em 2026-11-13; 1.1.0 adiciona `AuditEvent`, compatível)
+- Versão: **1.2.0** · Status: **aprovado** (1.0.0 pela responsável humana em 2026-11-13; 1.1.0 e 1.2.0 são aditivas e decididas pelo agente 01, ADR-017)
+- 1.1.0: `AuditEvent`. 1.2.0: `fit_assessment` (`fitAssessmentResult`, `nettCategory`), `CompanyCapability.subject` e `financialIndicators`, `opportunityUpsert`/`opportunityItemUpsert`/`documentRef`, `parseAnalysisResult(kind, valor)`.
 - Fonte da verdade executável: `src/contracts/*.ts` (Zod). Este documento explica; o código manda. Divergência entre os dois = bug do agente 01.
 - Alteração: PR do agente 01 (ou proposta de outro agente via handoff) + atualização de `CONTRACTS_VERSION` + entrada em `DECISIONS.md` se quebrar compatibilidade.
 
@@ -111,7 +112,15 @@ export interface SourceConnector {
   normalize(payload: unknown): { opportunity: OpportunityUpsert; items: OpportunityItemUpsert[]; documents: DocumentRef[] } | { skip: string };
 }
 
-// src/server/analysis/engine.ts — agente 03
+// Resultado por kind (1.2.0): src/contracts/analysis.ts → `analysisResultSchemas` / `parseAnalysisResult(kind, valor)`.
+// Toda escrita de AIAnalysis.result DEVE passar por parseAnalysisResult. fit_assessment = `fitAssessmentResult` (src/contracts/fit.ts).
+
+// src/server/analysis/fit — agente 03 (kind = fit_assessment; precisa de dados da empresa, por isso NÃO usa AnalysisEngine)
+//   runFitAssessment(input: FitInput, options): Promise<FitAssessmentResult>   // puro; só texto público vai a LLM (ADR-008)
+//   toAIAnalysis(result, ...): AIAnalysis                                      // linha canônica, reviewStatus = pending_review
+//   scoreCommercial(...)  // ÚNICA fonte da nota comercial; T-305 (match.score) deve reaproveitá-la
+
+// src/server/analysis/engine.ts — agente 03 (kinds que dependem só do documento, ex.: tender_summary)
 export interface AnalysisEngine {
   id: 'llm' | 'local_rules';
   analyze(input: { kind: AnalysisKind; pages: Array<{ page: number; text: string }>; budget: { maxMs: number; maxTokens: number } }):
@@ -141,7 +150,7 @@ export function recordAuditSafe(db, input: AuditInput): Promise<void>;      // s
 export function enqueue<N extends JobName>(name: N, payload: JobPayload<N>): Promise<string>;
 ```
 
-`*Upsert`/`DocumentRef` são derivados com `.omit()` dos schemas canônicos no PR de T-201.
+`OpportunityUpsert`, `OpportunityItemUpsert` e `DocumentRef` são canônicos desde a 1.2.0 (`src/contracts/sources.ts`, `documents.ts`).
 
 ## 6. Identidade visual (contrato de UI)
 

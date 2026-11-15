@@ -6,7 +6,14 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   aiAnalysis,
+  companyCapability,
   decimal,
+  documentRef,
+  fitAssessmentResult,
+  nettCategory,
+  opportunityItemUpsert,
+  opportunityUpsert,
+  parseAnalysisResult,
   document,
   humanReview,
   jobs,
@@ -87,4 +94,33 @@ test('toda fila tem dono válido e payload só com campos declarados', () => {
   }
   assert.equal(jobs['analysis.run'].payload.safeParse({ analysisId: id }).success, true);
   assert.equal(jobs['analysis.run'].payload.safeParse({}).success, false);
+});
+
+test('1.2.0: capacidade — subject e indicadores financeiros só onde fazem sentido', () => {
+  const base = {
+    id, companyId: id, kind: 'certification', subject: 'professional', name: 'EXIN PDPF', description: '', keywords: [],
+    catalogCodes: [], ufs: [], maxContractValue: null, evidenceDocumentId: null, validUntil: null, active: true,
+    financialIndicators: null, createdAt: now, updatedAt: now,
+  };
+  assert.equal(companyCapability.safeParse(base).success, true);
+  assert.equal(companyCapability.safeParse({ ...base, kind: 'product' }).success, false, 'professional só em certification/attestation');
+  const fin = { referenceDate: '2025-12-31', currentLiquidity: '1.5000', generalLiquidity: '1.2000', generalSolvency: '1.1000', netWorth: '250000.00' };
+  assert.equal(companyCapability.safeParse({ ...base, subject: 'company', kind: 'financial_capacity', financialIndicators: fin }).success, true);
+  assert.equal(companyCapability.safeParse({ ...base, subject: 'company', kind: 'license', financialIndicators: fin }).success, false);
+});
+
+test('1.2.0: resultado de análise validado por kind; nettCategory tem 6 valores', () => {
+  assert.equal(nettCategory.options.length, 6);
+  assert.equal(parseAnalysisResult('fit_assessment', {}).success, false);
+  assert.equal(parseAnalysisResult('tender_summary', {}).success, false);
+  assert.equal(parseAnalysisResult('risk_review', { qualquer: 'coisa' }).success, true);
+  assert.equal(fitAssessmentResult.shape.schemaVersion.value, 'fit-assessment/1.0.0');
+});
+
+test('1.2.0: upserts da normalização derivam dos canônicos', () => {
+  for (const k of ['id', 'primarySourceId', 'firstSeenAt', 'lastSeenAt', 'createdAt', 'updatedAt']) assert.equal(k in opportunityUpsert.shape, false, k);
+  assert.ok('canonicalKey' in opportunityUpsert.shape && 'contentHash' in opportunityUpsert.shape);
+  assert.equal('opportunityId' in opportunityItemUpsert.shape, false);
+  assert.equal(documentRef.safeParse({ externalId: '1', kind: 'tender_notice', title: 'Edital', sourceUrl: 'http://x', mimeType: 'application/pdf', publishedAt: null }).success, true);
+  assert.equal(documentRef.safeParse({ externalId: '', kind: 'tender_notice', title: 'E', sourceUrl: 'nao-url', mimeType: 'x', publishedAt: null }).success, false);
 });

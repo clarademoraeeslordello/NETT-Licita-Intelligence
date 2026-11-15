@@ -9,11 +9,10 @@
  * proximity (order-free window), not by literal equality. `weight` ∈ (0, 1] says how strongly the
  * concept alone characterizes the category.
  */
-import { z } from 'zod';
+import { nettCategory, type NettCategory } from '../../../contracts/fit';
 
-/** The six Nett commercial categories. Not a canonical contract entity yet (see handoff request). */
-export const nettCategory = z.enum(['lgpd', 'audit_iso', 'software', 'data_bi_ai', 'security_infra', 'it_hardware']);
-export type NettCategory = z.infer<typeof nettCategory>;
+/** The six Nett commercial categories are a canonical contract since 1.2.0 (src/contracts/fit.ts). */
+export { nettCategory, type NettCategory };
 
 export type Concept = { id: string; label: string; weight: number; expressions: string[]; window?: number };
 export type CategoryEntry = { id: NettCategory; label: string; product: string | null; concepts: Concept[] };
