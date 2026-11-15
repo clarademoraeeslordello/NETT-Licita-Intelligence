@@ -119,41 +119,41 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
     <div className="-mx-4 -my-6 sm:-mx-6 lg:-mx-8 lg:-my-8">
 
       {/* -------------------------------- Hero -------------------------------- */}
-      <section className="relative overflow-hidden border-b border-ink-200 bg-white">
+      <section className="relative overflow-hidden border-b border-nett-text-muted/15 bg-nett-surface">
         <div className="grid-bg pointer-events-none absolute inset-0 opacity-70" />
         <div
           className="pointer-events-none absolute -top-40 left-1/2 h-[420px] w-[820px] -translate-x-1/2 rounded-full opacity-40 blur-3xl"
-          style={{ background: 'radial-gradient(closest-side, #bfd3ff, transparent)' }}
+          style={{ background: 'radial-gradient(closest-side, #8A6D1A, transparent)' }}
         />
         <div className="relative mx-auto max-w-6xl px-5 py-14 lg:py-20">
           <div className="grid items-start gap-12 lg:grid-cols-[1.05fr_0.95fr]">
             <div className="animate-[fade-up_0.5s_ease-out_both]">
-              <span className="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1.5 text-xs font-medium text-brand-700">
+              <span className="inline-flex items-center gap-2 rounded-full border border-nett-gold/40 bg-nett-gold/10 px-3 py-1.5 text-xs font-medium text-nett-gold-light">
                 <IconSparkles size={14} />
                 Análise de licitações com IA · Lei 14.133/2021
               </span>
 
-              <h1 className="text-balance mt-6 text-4xl font-semibold leading-[1.1] text-ink-900 sm:text-5xl">
+              <h1 className="text-balance mt-6 text-4xl font-semibold leading-[1.1] text-nett-text sm:text-5xl">
                 Leia um edital inteiro em minutos, não em horas.
               </h1>
 
-              <p className="text-pretty mt-5 max-w-xl text-lg leading-relaxed text-ink-600">
+              <p className="text-pretty mt-5 max-w-xl text-lg leading-relaxed text-nett-text">
                 Envie o PDF do edital e receba um relatório executivo estruturado: prazos críticos, valores,
                 exigências de habilitação, obrigações, pontos de atenção priorizados e checklist de participação —
                 cada informação ancorada na página de onde saiu.
               </p>
 
-              <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-ink-600">
+              <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-nett-text">
                 <span className="inline-flex items-center gap-2">
-                  <IconCheckCircle size={16} className="text-ok-500" />
+                  <IconCheckCircle size={16} className="text-nett-gold" />
                   Extração estruturada com validação de schema
                 </span>
                 <span className="inline-flex items-center gap-2">
-                  <IconCheckCircle size={16} className="text-ok-500" />
+                  <IconCheckCircle size={16} className="text-nett-gold" />
                   Relatório em PDF pronto para o cliente
                 </span>
                 <span className="inline-flex items-center gap-2">
-                  <IconCheckCircle size={16} className="text-ok-500" />
+                  <IconCheckCircle size={16} className="text-nett-gold" />
                   Sem informação inventada
                 </span>
               </div>
@@ -165,9 +165,9 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
                   { value: 'A4', label: 'relatório em PDF' },
                   { value: capabilities.ai.configured ? 'IA' : 'Local', label: 'motor de análise' },
                 ].map((item) => (
-                  <div key={item.label} className="rounded-2xl border border-ink-200 bg-white/80 px-4 py-3">
-                    <p className="font-mono text-lg font-semibold text-ink-900">{item.value}</p>
-                    <p className="text-xs text-ink-500">{item.label}</p>
+                  <div key={item.label} className="rounded-2xl border border-nett-text-muted/15 bg-nett-text/80 px-4 py-3">
+                    <p className="font-mono text-lg font-semibold text-nett-text">{item.value}</p>
+                    <p className="text-xs text-nett-text-muted">{item.label}</p>
                   </div>
                 ))}
               </div>
@@ -177,7 +177,7 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
               <AnalyzeWorkspace capabilities={capabilities} origemPncp={origemPncp} />
 
               {!capabilities.ai.configured && !capabilities.degraded ? (
-                <div className="mt-4 flex items-start gap-3 rounded-2xl border border-warn-100 bg-warn-100/40 p-4 text-sm text-warn-700">
+                <div className="mt-4 flex items-start gap-3 rounded-2xl border border-nett-gold-dark bg-nett-gold-dark/12 p-4 text-sm text-nett-gold-light">
                   <IconAlert size={18} className="mt-0.5 shrink-0" />
                   <p>
                     <strong>Modo demonstração local ativo.</strong> Sem <code className="font-mono">DEEPSEEK_API_KEY</code>{' '}
@@ -194,9 +194,9 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
       {/* ----------------------------- Pipeline ------------------------------ */}
       <section id="como-funciona" className="mx-auto max-w-6xl px-5 py-16">
         <div className="max-w-2xl">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600">Pipeline</p>
-          <h2 className="mt-3 text-3xl font-semibold text-ink-900">Do PDF bruto ao relatório executivo</h2>
-          <p className="mt-3 text-ink-600">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-nett-gold">Pipeline</p>
+          <h2 className="mt-3 text-3xl font-semibold text-nett-text">Do PDF bruto ao relatório executivo</h2>
+          <p className="mt-3 text-nett-text">
             Cada etapa é visível para o usuário. Nenhuma informação chega ao relatório sem passar por validação de
             schema.
           </p>
@@ -208,16 +208,16 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
             return (
               <li
                 key={step.title}
-                className="group relative rounded-2xl border border-ink-200 bg-white p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lift"
+                className="group relative rounded-2xl border border-nett-text-muted/15 bg-nett-surface p-5 shadow-soft transition hover:-translate-y-0.5 hover:border-nett-gold/40 hover:shadow-lift"
               >
                 <div className="flex items-center justify-between">
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition group-hover:bg-brand-100">
+                  <span className="flex size-10 items-center justify-center rounded-xl bg-nett-gold/10 text-nett-gold transition group-hover:bg-nett-gold/20">
                     <Icon size={20} />
                   </span>
-                  <span className="font-mono text-xs text-ink-300">0{index + 1}</span>
+                  <span className="font-mono text-xs text-nett-text-muted">0{index + 1}</span>
                 </div>
-                <p className="mt-4 font-medium text-ink-900">{step.title}</p>
-                <p className="mt-1 text-sm leading-relaxed text-ink-500">{step.detail}</p>
+                <p className="mt-4 font-medium text-nett-text">{step.title}</p>
+                <p className="mt-1 text-sm leading-relaxed text-nett-text-muted">{step.detail}</p>
               </li>
             );
           })}
@@ -225,12 +225,12 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
       </section>
 
       {/* -------------------------- O que é extraído ------------------------- */}
-      <section id="o-que-e-extraido" className="border-y border-ink-200 bg-white">
+      <section id="o-que-e-extraido" className="border-y border-nett-text-muted/15 bg-nett-surface">
         <div className="mx-auto max-w-6xl px-5 py-16">
           <div className="max-w-2xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600">Escopo da análise</p>
-            <h2 className="mt-3 text-3xl font-semibold text-ink-900">O que a análise entrega</h2>
-            <p className="mt-3 text-ink-600">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-nett-gold">Escopo da análise</p>
+            <h2 className="mt-3 text-3xl font-semibold text-nett-text">O que a análise entrega</h2>
+            <p className="mt-3 text-nett-text">
               Oito blocos de informação organizados no mesmo padrão de qualidade, com página de origem sempre que
               disponível.
             </p>
@@ -242,13 +242,13 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
               return (
                 <div
                   key={item.title}
-                  className="rounded-2xl border border-ink-200 bg-ink-50/60 p-5 transition hover:border-ink-300 hover:bg-white"
+                  className="rounded-2xl border border-nett-text-muted/15 bg-nett-black/60 p-5 transition hover:border-nett-text-muted/30 hover:bg-nett-surface"
                 >
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-white text-ink-700 shadow-ring">
+                  <span className="flex size-10 items-center justify-center rounded-xl bg-nett-surface text-nett-text shadow-ring">
                     <Icon size={19} />
                   </span>
-                  <p className="mt-4 font-medium text-ink-900">{item.title}</p>
-                  <p className="mt-1 text-sm leading-relaxed text-ink-500">{item.detail}</p>
+                  <p className="mt-4 font-medium text-nett-text">{item.title}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-nett-text-muted">{item.detail}</p>
                 </div>
               );
             })}
@@ -260,40 +260,40 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
       <section id="confiabilidade" className="mx-auto max-w-6xl px-5 py-16">
         <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600">Confiabilidade</p>
-            <h2 className="mt-3 text-3xl font-semibold text-ink-900">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-nett-gold">Confiabilidade</p>
+            <h2 className="mt-3 text-3xl font-semibold text-nett-text">
               Um analisador que sabe dizer “não sei”
             </h2>
-            <p className="mt-4 leading-relaxed text-ink-600">
+            <p className="mt-4 leading-relaxed text-nett-text">
               A parte mais difícil de automatizar um documento jurídico não é extrair texto: é não inventar. O
               Analisador Inteligente de Editais trata ausência, ambiguidade e inferência como estados explícitos do
               modelo de dados — e isso aparece no relatório.
             </p>
 
-            <div className="mt-6 rounded-2xl border border-ink-200 bg-white p-5 shadow-soft">
-              <p className="text-sm font-medium text-ink-900">Estados possíveis de cada informação</p>
+            <div className="mt-6 rounded-2xl border border-nett-text-muted/15 bg-nett-surface p-5 shadow-soft">
+              <p className="text-sm font-medium text-nett-text">Estados possíveis de cada informação</p>
               <ul className="mt-4 space-y-3 text-sm">
                 <li className="flex items-start gap-3">
-                  <span className="mt-0.5 rounded-full bg-ok-100 px-2.5 py-1 text-xs font-semibold text-ok-700">
+                  <span className="mt-0.5 rounded-full bg-nett-gold/20 px-2.5 py-1 text-xs font-semibold text-nett-gold-light">
                     Encontrado
                   </span>
-                  <span className="text-ink-600">
+                  <span className="text-nett-text">
                     Localizado literalmente no edital, com trecho e página de origem.
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="mt-0.5 rounded-full bg-warn-100 px-2.5 py-1 text-xs font-semibold text-warn-700">
+                  <span className="mt-0.5 rounded-full bg-nett-gold-dark/30 px-2.5 py-1 text-xs font-semibold text-nett-gold-light">
                     Inferido
                   </span>
-                  <span className="text-ink-600">
+                  <span className="text-nett-text">
                     Deduzido do contexto — vem sempre acompanhado da justificativa da dedução.
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
-                  <span className="mt-0.5 rounded-full bg-ink-100 px-2.5 py-1 text-xs font-semibold text-ink-600">
+                  <span className="mt-0.5 rounded-full bg-nett-raised px-2.5 py-1 text-xs font-semibold text-nett-text">
                     Não identificado
                   </span>
-                  <span className="text-ink-600">
+                  <span className="text-nett-text">
                     O documento não traz a informação. O relatório escreve exatamente “Não identificado no documento.”
                   </span>
                 </li>
@@ -305,12 +305,12 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
             {GUARANTEES.map((item) => {
               const Icon = item.icon;
               return (
-                <div key={item.title} className="rounded-2xl border border-ink-200 bg-white p-5 shadow-soft">
-                  <span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                <div key={item.title} className="rounded-2xl border border-nett-text-muted/15 bg-nett-surface p-5 shadow-soft">
+                  <span className="flex size-10 items-center justify-center rounded-xl bg-nett-gold/10 text-nett-gold">
                     <Icon size={19} />
                   </span>
-                  <p className="mt-4 font-medium text-ink-900">{item.title}</p>
-                  <p className="mt-1.5 text-sm leading-relaxed text-ink-500">{item.detail}</p>
+                  <p className="mt-4 font-medium text-nett-text">{item.title}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-nett-text-muted">{item.detail}</p>
                 </div>
               );
             })}
@@ -319,19 +319,19 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
       </section>
 
       {/* ------------------------------ Relatório ---------------------------- */}
-      <section className="border-y border-ink-200 bg-white">
+      <section className="border-y border-nett-text-muted/15 bg-nett-surface">
         <div className="mx-auto max-w-6xl px-5 py-16">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.85fr] lg:items-center">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-600">Relatório</p>
-              <h2 className="mt-3 text-3xl font-semibold text-ink-900">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-nett-gold">Relatório</p>
+              <h2 className="mt-3 text-3xl font-semibold text-nett-text">
                 Um documento que você entregaria ao cliente
               </h2>
-              <p className="mt-4 leading-relaxed text-ink-600">
+              <p className="mt-4 leading-relaxed text-nett-text">
                 O relatório sai em tela e em PDF A4 com capa, dez seções numeradas, tabelas, badges de status,
                 priorização dos pontos de atenção e checklist de participação.
               </p>
-              <ol className="mt-6 grid gap-2 text-sm text-ink-600 sm:grid-cols-2">
+              <ol className="mt-6 grid gap-2 text-sm text-nett-text sm:grid-cols-2">
                 {[
                   'Capa com identificação do certame',
                   '1. Resumo executivo',
@@ -346,7 +346,7 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
                   '10. Conclusão',
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-2">
-                    <IconCheckCircle size={15} className="shrink-0 text-ok-500" />
+                    <IconCheckCircle size={15} className="shrink-0 text-nett-gold" />
                     {item}
                   </li>
                 ))}
@@ -354,50 +354,50 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
             </div>
 
             <div className="relative">
-              <div className="rounded-2xl border border-ink-200 bg-ink-50 p-3 shadow-lift">
-                <div className="rounded-xl border border-ink-200 bg-white p-5">
-                  <div className="flex items-center justify-between border-b border-ink-200 pb-3">
+              <div className="rounded-2xl border border-nett-text-muted/15 bg-nett-black p-3 shadow-lift">
+                <div className="rounded-xl border border-nett-text-muted/15 bg-nett-surface p-5">
+                  <div className="flex items-center justify-between border-b border-nett-text-muted/15 pb-3">
                     <div className="flex items-center gap-2">
-                      <span className="flex size-7 items-center justify-center rounded-lg bg-ink-900 text-[10px] font-semibold text-white">
+                      <span className="flex size-7 items-center justify-center rounded-lg bg-nett-raised text-[10px] font-semibold text-nett-text">
                         AI
                       </span>
-                      <span className="text-xs font-medium text-ink-800">Relatório de análise</span>
+                      <span className="text-xs font-medium text-nett-text">Relatório de análise</span>
                     </div>
-                    <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-700">
+                    <span className="rounded-full bg-nett-gold/10 px-2 py-0.5 text-[10px] font-semibold text-nett-gold-light">
                       PDF · A4
                     </span>
                   </div>
                   <div className="mt-4 space-y-3">
-                    <div className="h-2.5 w-3/4 rounded-full bg-ink-200" />
-                    <div className="h-2 w-full rounded-full bg-ink-100" />
-                    <div className="h-2 w-5/6 rounded-full bg-ink-100" />
+                    <div className="h-2.5 w-3/4 rounded-full bg-nett-text-muted/15" />
+                    <div className="h-2 w-full rounded-full bg-nett-raised" />
+                    <div className="h-2 w-5/6 rounded-full bg-nett-raised" />
                     <div className="mt-4 grid grid-cols-3 gap-2">
                       {['Prazo', 'Valor', 'Itens'].map((label) => (
-                        <div key={label} className="rounded-lg border border-ink-200 bg-ink-50 p-2.5">
-                          <p className="text-[9px] uppercase tracking-wider text-ink-500">{label}</p>
-                          <div className="mt-1.5 h-2 w-full rounded-full bg-ink-200" />
+                        <div key={label} className="rounded-lg border border-nett-text-muted/15 bg-nett-black p-2.5">
+                          <p className="text-[9px] uppercase tracking-wider text-nett-text-muted">{label}</p>
+                          <div className="mt-1.5 h-2 w-full rounded-full bg-nett-text-muted/15" />
                         </div>
                       ))}
                     </div>
                     {['alto', 'medio', 'baixo'].map((nivel) => (
                       <div
                         key={nivel}
-                        className={`rounded-lg border-l-4 bg-ink-50 p-2.5 ${
+                        className={`rounded-lg border-l-4 bg-nett-black p-2.5 ${
                           nivel === 'alto'
-                            ? 'border-danger-500'
+                            ? 'border-nett-text/60'
                             : nivel === 'medio'
-                              ? 'border-warn-500'
-                              : 'border-brand-400'
+                              ? 'border-nett-gold'
+                              : 'border-nett-gold'
                         }`}
                       >
-                        <div className="h-2 w-2/5 rounded-full bg-ink-300" />
-                        <div className="mt-1.5 h-1.5 w-full rounded-full bg-ink-200" />
+                        <div className="h-2 w-2/5 rounded-full bg-nett-text-muted/30" />
+                        <div className="mt-1.5 h-1.5 w-full rounded-full bg-nett-text-muted/15" />
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
-              <p className="mt-3 text-center text-xs text-ink-500">Prévia ilustrativa do relatório gerado</p>
+              <p className="mt-3 text-center text-xs text-nett-text-muted">Prévia ilustrativa do relatório gerado</p>
             </div>
           </div>
         </div>
@@ -405,27 +405,27 @@ export default async function AnalisadorPage({ searchParams }: PageProps) {
 
       {/* -------------------------------- CTA -------------------------------- */}
       <section className="mx-auto max-w-6xl px-5 py-16">
-        <div className="relative overflow-hidden rounded-3xl bg-ink-900 px-8 py-12 text-center text-white">
+        <div className="relative overflow-hidden rounded-3xl bg-nett-raised px-8 py-12 text-center text-nett-text">
           <div
             className="pointer-events-none absolute inset-0 opacity-30"
-            style={{ background: 'radial-gradient(600px 200px at 50% 0%, #2748e3, transparent)' }}
+            style={{ background: 'radial-gradient(600px 200px at 50% 0%, #C9A227, transparent)' }}
           />
           <div className="relative">
             <h2 className="text-3xl font-semibold">Quer ver funcionando com um edital real?</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-ink-200">
+            <p className="mx-auto mt-4 max-w-2xl text-nett-text">
               Use o edital de demonstração incluído no projeto e acompanhe o pipeline completo: extração, análise,
               estruturação e relatório em PDF.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <a
                 href="#enviar-edital"
-                className="rounded-xl bg-white px-5 py-3 text-sm font-medium text-ink-900 transition hover:bg-ink-100"
+                className="rounded-xl bg-nett-surface px-5 py-3 text-sm font-medium text-nett-text transition hover:bg-nett-raised"
               >
                 Enviar meu edital
               </a>
               <a
                 href="/api/demo/edital?download=1"
-                className="rounded-xl border border-white/25 px-5 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+                className="rounded-xl border border-nett-text/25 px-5 py-3 text-sm font-medium text-nett-text transition hover:bg-nett-text/10"
               >
                 Baixar o edital de demonstração
               </a>
