@@ -43,6 +43,13 @@
       "when": 1794748499429,
       "tag": "0005_capability_subject_financial",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794837358078,
+      "tag": "0006_opportunities_search_index",
+      "breakpoints": true
     }
   ]
 }

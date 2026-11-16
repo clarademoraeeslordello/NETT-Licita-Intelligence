@@ -25,8 +25,8 @@ const when = z.union([isoDateTime, z.iso.date()]);
 export const opportunitySort = z.enum(['published_desc', 'close_asc']);
 
 export const opportunityListQuery = z.object({
-  /** Busca textual no título, objeto e órgão. */
-  q: z.string().trim().min(2).max(100).optional(),
+  /** Busca textual (título, objeto, órgão e município), sem acento/caixa. Mínimo de 3 caracteres (busca por trigramas indexada). */
+  q: z.string().trim().min(3).max(100).optional(),
   ufs: csv(uf, 27),
   modalities: csv(z.coerce.number().int().positive()),
   /** Situação EFETIVA (ADR-018). */
