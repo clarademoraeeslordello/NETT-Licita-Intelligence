@@ -9,6 +9,7 @@ import { getDb } from '../db';
 import { consumeRateLimit, RULES, type RateLimitRule } from '../http/rate-limit';
 import { requestContext } from '../http/request';
 import { readAuthConfig, sessionCookieName } from './config';
+import { HttpError } from '../http/errors';
 import { AuthError, unauthenticated } from './errors';
 import { authorizeCompany, type CompanyRole } from './guard';
 import { resolveSession, type Session } from './session';
@@ -69,8 +70,9 @@ export function withApi<C>(handler: (request: Request, ctx: C) => Promise<Respon
       if (limited) return limited;
       return await handler(request, ctx);
     } catch (e) {
-      if (e instanceof AuthError) {
-        return NextResponse.json({ error: { code: e.code, message: e.message } }, { status: e.status });
+      if (e instanceof HttpError) {
+        const error = { code: e.code, message: e.message, ...(e.details !== undefined ? { details: e.details } : {}) };
+        return NextResponse.json({ error }, { status: e.status });
       }
       console.error('[api] erro não tratado:', e instanceof Error ? e.message : e);
       return NextResponse.json({ error: { code: 'INTERNAL', message: 'Erro interno.' } }, { status: 500 });

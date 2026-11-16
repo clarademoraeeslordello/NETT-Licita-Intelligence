@@ -62,6 +62,10 @@ Quem pode propor: qualquer agente (via PR neste arquivo). Quem aceita: agente 01
 - **Compatibilidade:** mudança aditiva. Migration 0005 adiciona `subject` (padrão `company`) e `financial_indicators`, com checks no banco. Código dos agentes 02 e 03 reexporta dos contratos; único ajuste de fixture: `capability()` do agente 03 ganhou os dois campos novos.
 - **`completeCapabilityKinds`** (opção de execução do agente 03) fica fora do banco, como ele propôs.
 
+### ADR-022 — HttpError comum nas rotas /api/v1 · `aceita` (agente 01, 2026-11-16, pedido dos agentes 03 e 04)
+- **Decisão:** `HttpError(code, status, message, details?)` em `src/server/http/errors.ts`, com atalhos `badRequest`, `notFound`, `conflict` e `unprocessable`, também exportados de `@/server/auth`. `AuthError` passa a ser um `HttpError`. `withApi` converte qualquer `HttpError` em `apiError` com o status indicado; erro desconhecido continua 500 sem detalhe.
+- **Regras:** `details` só com dado seguro para o cliente. Recurso de outra empresa responde 404, não 403 (não revela existência). Rotas não criam wrapper de erro próprio.
+
 ### ADR-006 — Filas com pg-boss sobre o Postgres · `aceita`
 - **Decisão:** pg-boss no schema `pgboss` do mesmo banco. Contrato em `src/contracts/jobs.ts`.
 - **Alternativas:** Redis + BullMQ (mais um serviço); SQS (fora do Railway).
