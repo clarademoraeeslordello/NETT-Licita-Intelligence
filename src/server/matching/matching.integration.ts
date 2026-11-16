@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { after, before, test } from 'node:test';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import type { PgBoss } from 'pg-boss';
@@ -27,8 +27,14 @@ let a1: string, a2: string, a3: string, a4: string, b1: string, c1: string;
 
 const company = async (n: string, digit: number, status: 'active' | 'suspended') =>
   (await db.insert(s.companies).values({ legalName: `Empresa ${n}`, cnpj: `4${digit}${run}000`.slice(0, 14).padEnd(14, '0'), size: 'EPP', status }).returning({ id: s.companies.id }))[0]!.id;
-const profile = async (companyId: string, over: Partial<typeof s.searchProfiles.$inferInsert> = {}) =>
-  (await db.insert(s.searchProfiles).values({ companyId, name: 'p', includeTerms: ['lgpd'], ownerUserId: user, ufs: ['RN'], modalityCodes: [6], ...over }).returning({ id: s.searchProfiles.id }))[0]!.id;
+/** Every profile created here is removed in `after`: active profiles left in the shared test database would change
+ *  what other suites see (e.g. the source sync enriches whatever matches ANY active profile). Scores cascade. */
+const createdProfiles: string[] = [];
+const profile = async (companyId: string, over: Partial<typeof s.searchProfiles.$inferInsert> = {}) => {
+  const id = (await db.insert(s.searchProfiles).values({ companyId, name: 'p', includeTerms: ['lgpd'], ownerUserId: user, ufs: ['RN'], modalityCodes: [6], ...over }).returning({ id: s.searchProfiles.id }))[0]!.id;
+  createdProfiles.push(id);
+  return id;
+};
 const rowsFor = (opportunityId = opp) => db.select().from(s.matchScores).where(eq(s.matchScores.opportunityId, opportunityId));
 
 before(async () => {
@@ -65,13 +71,16 @@ before(async () => {
     .returning({ id: s.opportunities.id });
   await db.insert(s.opportunityItems).values({ opportunityId: opp, number: 1, description: 'Serviço de adequação à LGPD', kind: 'service', quantity: '1', unit: 'SV' });
   a1 = await profile(A);
-  a2 = await profile(A, { name: 'fora', ufs: ['SP'] });
+  a2 = await profile(A, { name: 'nacional', ufs: [] });
   a3 = await profile(A, { name: 'inativo', active: false });
   a4 = await profile(A, { name: 'outra fonte', sourceKeys: [`mt_other_${run}`] });
   b1 = await profile(B, { ufs: [] });
   c1 = await profile(C);
 });
-after(() => pool.end());
+after(async () => {
+  if (createdProfiles.length) await db.delete(s.searchProfiles).where(inArray(s.searchProfiles.id, createdProfiles));
+  await pool.end();
+});
 
 test('uma nota por SearchProfile ativo de empresa ativa; inativo, outra fonte e empresa suspensa ficam de fora', async () => {
   // Without companyId it scores every active profile in the database (the shared test database may hold others).
@@ -82,7 +91,7 @@ test('uma nota por SearchProfile ativo de empresa ativa; inativo, outra fonte e 
   assert.deepEqual(rows.map((m) => m.searchProfileId).sort(), [a1, a2, b1].sort());
   for (const absent of [a3, a4, c1]) assert.ok(!rows.some((m) => m.searchProfileId === absent));
   const sc = (id: string) => rows.find((m) => m.searchProfileId === id)!;
-  assert.ok(sc(a1).score > sc(a2).score, 'UF dentro da área pontua mais que fora');
+  assert.ok(sc(a1).score > sc(a2).score, 'UF na área de atuação pontua mais que perfil nacional');
   for (const m of rows) {
     const parsed = matchScore.safeParse({ ...m, computedAt: m.computedAt.toISOString() });
     assert.ok(parsed.success, 'linha obedece ao contrato MatchScore');
@@ -115,9 +124,9 @@ test('idempotente: repetir não regrava; muda o conteúdo, o perfil ou passa o p
 
 test('companyId restringe a empresa; oportunidade inexistente não falha nem grava', async () => {
   const only = await scoreOpportunity(db, { opportunityId: opp, companyId: B }, new Date(Date.now() + 3 * MAX_SCORE_AGE_MS));
-  assert.deepEqual({ profiles: only.profiles, written: only.written }, { profiles: 1, written: 1 });
+  assert.deepEqual({ eligible: only.eligible, written: only.written }, { eligible: 1, written: 1 });
   const ghost = await scoreOpportunity(db, { opportunityId: '00000000-0000-4000-8000-000000000000' });
-  assert.deepEqual(ghost, { opportunityFound: false, profiles: 0, written: 0, skipped: 0 });
+  assert.deepEqual(ghost, { opportunityFound: false, eligible: 0, discarded: 0, unmatched: 0, written: 0, skipped: 0, removed: 0 });
 });
 
 test('getMatchSummaries: melhor nota dos perfis ativos, faixa e categoria; só da própria empresa', async () => {
@@ -154,4 +163,149 @@ test('worker: match.score está registrado e roda pelo registro (payload validad
   assert.deepEqual((await rowsFor()).filter((m) => m.companyId === B).length, 1);
   assert.ok(!(await rowsFor()).some((m) => m.companyId === A), 'só a empresa do payload foi pontuada');
   await assert.rejects(registry.run('match.score', { opportunityId: 'lixo' }, ctx), /payload inválido/);
+});
+
+/* ------------------- descarte rápido (primeira varredura: dezenas de milhares de oportunidades) ------------------- */
+
+/** Counts the SQL statements a block sends through the pool. */
+async function captureSql<T>(fn: () => Promise<T>): Promise<{ result: T; statements: string[] }> {
+  const statements: string[] = [];
+  const original = pool.query.bind(pool) as (...a: unknown[]) => unknown;
+  (pool as unknown as { query: unknown }).query = (...args: unknown[]) => {
+    const first = args[0];
+    statements.push(typeof first === 'string' ? first : String((first as { text?: string }).text ?? ''));
+    return original(...args);
+  };
+  try {
+    return { result: await fn(), statements };
+  } finally {
+    (pool as unknown as { query: unknown }).query = original;
+  }
+}
+
+test('descarte rápido: UF, modalidade, faixa de valor e termos fora → nada é gravado e poucas consultas', async () => {
+  const D = await company('D', 4, 'active');
+  const dUf = await profile(D, { name: 'uf', ufs: ['SP'] });
+  const dMod = await profile(D, { name: 'modalidade', modalityCodes: [4] });
+  const dMin = await profile(D, { name: 'valor mínimo', minValue: '500000' });
+  const dMax = await profile(D, { name: 'valor máximo', maxValue: '100000' });
+  const dTerms = await profile(D, { name: 'termos', includeTerms: ['merenda escolar'] });
+  const { result, statements } = await captureSql(() => scoreOpportunity(db, { opportunityId: opp, companyId: D }));
+  assert.deepEqual({ eligible: result.eligible, discarded: result.discarded, written: result.written, removed: result.removed }, { eligible: 0, discarded: 5, written: 0, removed: 0 });
+  assert.equal((await db.select().from(s.matchScores).where(eq(s.matchScores.companyId, D))).length, 0);
+  // opportunity, profiles, items (only because of the terms profile) and the existing-scores probe
+  assert.ok(statements.length <= 4, `consultas demais: ${statements.length}\n${statements.join('\n')}`);
+  assert.ok(!statements.some((q) => /^\s*(insert|update|delete)/i.test(q)), 'descartar não pode gravar');
+  void [dUf, dMod, dMin, dMax, dTerms];
+
+  // Without the terms profile the cheap filters end the job before touching items.
+  await db.delete(s.searchProfiles).where(eq(s.searchProfiles.id, dTerms));
+  const quick = await captureSql(() => scoreOpportunity(db, { opportunityId: opp, companyId: D }));
+  assert.ok(quick.statements.length <= 3, `consultas demais: ${quick.statements.length}`);
+  assert.ok(!quick.statements.some((q) => /opportunity_items/i.test(q)), 'itens não são lidos quando os filtros já descartam');
+});
+
+test('valor desconhecido ou sigiloso e UF/modalidade desconhecidas não descartam (na dúvida, mantém)', async () => {
+  const E = await company('E', 5, 'active');
+  const e1 = await profile(E, { ufs: ['SP'], modalityCodes: [4], minValue: '500000' });
+  const [unknown] = await db
+    .insert(s.opportunities)
+    .values({ canonicalKey: `pncp:mt${run}-2026-7`, primarySourceId: src, title: 'Adequação à LGPD', objectDescription: 'Consultoria para adequação à LGPD', agencyName: 'Prefeitura Fictícia', sphere: 'municipal', status: 'receiving_proposals', url: 'https://pncp.gov.br/u', contentHash: hash, confidentialBudget: true })
+    .returning({ id: s.opportunities.id });
+  const r = await scoreOpportunity(db, { opportunityId: unknown!.id, companyId: E });
+  assert.deepEqual({ eligible: r.eligible, written: r.written }, { eligible: 1, written: 1 });
+  assert.ok((await db.select().from(s.matchScores).where(eq(s.matchScores.searchProfileId, e1))).length === 1);
+});
+
+test('termos só nos itens: mantém o perfil (lê os itens antes de descartar); sem termo em lugar nenhum, descarta', async () => {
+  const F = await company('F', 6, 'active');
+  const hit = await profile(F, { name: 'notebook', includeTerms: ['notebook'], ufs: [], modalityCodes: [] });
+  const miss = await profile(F, { name: 'impressora', includeTerms: ['impressora'], ufs: [], modalityCodes: [] });
+  const [o2] = await db
+    .insert(s.opportunities)
+    .values({ canonicalKey: `pncp:mt${run}-2026-8`, primarySourceId: src, title: 'Pregão 12/2026', objectDescription: 'Aquisição de equipamentos para as secretarias', agencyName: 'Prefeitura Fictícia', sphere: 'municipal', status: 'receiving_proposals', uf: 'RN', url: 'https://pncp.gov.br/z', contentHash: hash })
+    .returning({ id: s.opportunities.id });
+  await db.insert(s.opportunityItems).values({ opportunityId: o2!.id, number: 1, description: 'Notebook 14 polegadas, 16 GB RAM', kind: 'material', quantity: '10', unit: 'UN' });
+  const r = await scoreOpportunity(db, { opportunityId: o2!.id, companyId: F });
+  assert.deepEqual({ eligible: r.eligible, discarded: r.discarded, written: r.written }, { eligible: 1, discarded: 1, written: 1 });
+  const rows = await db.select().from(s.matchScores).where(eq(s.matchScores.opportunityId, o2!.id));
+  assert.deepEqual(rows.map((m) => m.searchProfileId), [hit]);
+  assert.ok(!rows.some((m) => m.searchProfileId === miss));
+});
+
+test('a oportunidade mudou e o perfil deixou de casar: a nota antiga é removida; volta a casar → regrava', async () => {
+  await db.update(s.searchProfiles).set({ active: true }).where(eq(s.searchProfiles.id, a1)); // an earlier test deactivated it
+  await scoreOpportunity(db, { opportunityId: opp, companyId: A }, new Date(Date.now() + 9 * MAX_SCORE_AGE_MS));
+  assert.equal((await rowsFor()).filter((m) => m.searchProfileId === a1).length, 1, 'ponto de partida');
+  await db.update(s.opportunities).set({ uf: 'SP', contentHash: 'f'.repeat(64) }).where(eq(s.opportunities.id, opp));
+  const gone = await scoreOpportunity(db, { opportunityId: opp, companyId: A }, new Date(Date.now() + 9 * MAX_SCORE_AGE_MS + 1_000));
+  assert.equal(gone.removed, 1, 'a1 (UF RN) deixou de casar');
+  assert.ok(!(await rowsFor()).some((m) => m.searchProfileId === a1));
+  assert.ok((await rowsFor()).some((m) => m.searchProfileId === a2), 'perfil nacional continua casando');
+  await db.update(s.opportunities).set({ uf: 'RN', contentHash: hash }).where(eq(s.opportunities.id, opp));
+  const back = await scoreOpportunity(db, { opportunityId: opp, companyId: A }, new Date(Date.now() + 9 * MAX_SCORE_AGE_MS + 2_000));
+  assert.ok(back.written >= 1);
+  assert.ok((await rowsFor()).some((m) => m.searchProfileId === a1));
+});
+
+/* ------------------- T-305b: nota irrelevante (no_term_match / excluded_term) não é gravada ------------------- */
+
+const opportunityRow = (n: number, over: Partial<typeof s.opportunities.$inferInsert>) => ({
+  canonicalKey: `pncp:mt${run}-2026-b${n}`,
+  primarySourceId: src,
+  title: 'Pregão',
+  objectDescription: 'x',
+  agencyName: 'Prefeitura Fictícia',
+  sphere: 'municipal' as const,
+  status: 'receiving_proposals' as const,
+  uf: 'RN' as const,
+  url: 'https://pncp.gov.br/b',
+  contentHash: hash,
+  ...over,
+});
+
+test('T-305b: sem categoria Nett (no_term_match) ou com termo excluído (excluded_term) não grava nota', async () => {
+  const G = await company('G', 7, 'active');
+  const pTerms = await profile(G, { name: 'serviços', includeTerms: ['serviços'], ufs: [], modalityCodes: [] });
+  const pFood = await profile(G, { name: 'merenda', includeTerms: ['merenda'], ufs: [], modalityCodes: [] });
+  const pExcl = await profile(G, { name: 'exclui', includeTerms: ['lgpd'], excludeTerms: ['mapeamento de dados'], ufs: [], modalityCodes: [] });
+  const [noCategory] = await db.insert(s.opportunities).values(opportunityRow(1, { objectDescription: 'Contratação de serviços diversos de apoio administrativo' })).returning({ id: s.opportunities.id });
+  const [food] = await db.insert(s.opportunities).values(opportunityRow(2, { objectDescription: 'Aquisição de gêneros alimentícios para a merenda escolar' })).returning({ id: s.opportunities.id });
+  const [lgpd] = await db.insert(s.opportunities).values(opportunityRow(3, { objectDescription: 'Consultoria para adequação à LGPD e mapeamento de dados pessoais' })).returning({ id: s.opportunities.id });
+  const rows = (id: string) => db.select().from(s.matchScores).where(eq(s.matchScores.opportunityId, id));
+
+  const a = await scoreOpportunity(db, { opportunityId: noCategory!.id, companyId: G });
+  assert.deepEqual({ eligible: a.eligible, unmatched: a.unmatched, written: a.written }, { eligible: 1, unmatched: 1, written: 0 });
+  assert.equal((await rows(noCategory!.id)).length, 0, 'no_term_match não grava');
+
+  const b = await scoreOpportunity(db, { opportunityId: food!.id, companyId: G });
+  assert.deepEqual({ unmatched: b.unmatched, written: b.written }, { unmatched: 1, written: 0 });
+  assert.equal((await rows(food!.id)).length, 0, 'objeto excluído pelo dicionário não grava');
+
+  const c = await scoreOpportunity(db, { opportunityId: lgpd!.id, companyId: G });
+  assert.equal(c.written, 0, 'o perfil que exclui "mapeamento de dados" não grava');
+  assert.equal((await rows(lgpd!.id)).filter((m) => m.searchProfileId === pExcl).length, 0);
+  assert.equal(c.unmatched, 1);
+  void [pTerms, pFood];
+});
+
+test('T-305b: nota antiga que passou a ter a trava é apagada; sem a trava, continua gravada', async () => {
+  const H = await company('H', 8, 'active');
+  const pid = await profile(H, { includeTerms: ['lgpd', 'merenda'], ufs: [], modalityCodes: [] });
+  const [o] = await db.insert(s.opportunities).values(opportunityRow(4, { objectDescription: 'Consultoria para adequação à LGPD e mapeamento de dados pessoais' })).returning({ id: s.opportunities.id });
+  const mine = () => db.select().from(s.matchScores).where(eq(s.matchScores.searchProfileId, pid));
+
+  assert.equal((await scoreOpportunity(db, { opportunityId: o!.id, companyId: H })).written, 1);
+  assert.equal((await mine()).length, 1, 'relevante → gravada');
+
+  // the object changes to something the dictionary excludes: the stored score must go away
+  await db.update(s.opportunities).set({ objectDescription: 'Aquisição de gêneros alimentícios para a merenda escolar', contentHash: '1'.repeat(64) }).where(eq(s.opportunities.id, o!.id));
+  const gone = await scoreOpportunity(db, { opportunityId: o!.id, companyId: H }, new Date(Date.now() + 1_000));
+  assert.deepEqual({ written: gone.written, unmatched: gone.unmatched, removed: gone.removed }, { written: 0, unmatched: 1, removed: 1 });
+  assert.equal((await mine()).length, 0);
+
+  // and it comes back when the opportunity becomes relevant again
+  await db.update(s.opportunities).set({ objectDescription: 'Consultoria para adequação à LGPD e mapeamento de dados pessoais', contentHash: '2'.repeat(64) }).where(eq(s.opportunities.id, o!.id));
+  assert.equal((await scoreOpportunity(db, { opportunityId: o!.id, companyId: H }, new Date(Date.now() + 2_000))).written, 1);
+  assert.equal((await mine()).length, 1);
 });
