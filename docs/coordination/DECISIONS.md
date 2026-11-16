@@ -74,6 +74,10 @@ Quem pode propor: qualquer agente (via PR neste arquivo). Quem aceita: agente 01
 - **Implementação:** do agente 02, em PR própria. Após retentativas esgotadas, registrar `AuditEvent` e manter a oportunidade só com a listagem (visível, marcada sem itens).
 - **Deploy:** `npm run jobs:setup` é idempotente e cria a fila nova.
 
+### ADR-022 — HttpError comum nas rotas /api/v1 · `aceita` (agente 01, 2026-11-16, pedido dos agentes 03 e 04)
+- **Decisão:** `HttpError(code, status, message, details?)` em `src/server/http/errors.ts`, com atalhos `badRequest`, `notFound`, `conflict` e `unprocessable`, também exportados de `@/server/auth`. `AuthError` passa a ser um `HttpError`. `withApi` converte qualquer `HttpError` em `apiError` com o status indicado; erro desconhecido continua 500 sem detalhe.
+- **Regras:** `details` só com dado seguro para o cliente. Recurso de outra empresa responde 404, não 403 (não revela existência). Rotas não criam wrapper de erro próprio.
+
 ### ADR-006 — Filas com pg-boss sobre o Postgres · `aceita`
 - **Decisão:** pg-boss no schema `pgboss` do mesmo banco. Contrato em `src/contracts/jobs.ts`.
 - **Alternativas:** Redis + BullMQ (mais um serviço); SQS (fora do Railway).

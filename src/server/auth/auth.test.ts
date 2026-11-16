@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readAuthConfig } from './config';
 import { AuthError, unauthenticated } from './errors';
+import { HttpError, conflict, notFound, unprocessable } from '../http/errors';
 import { openFlow, sealFlow } from './flow';
 import { withApi } from './next';
 import { safeReturnTo } from './return-to';
@@ -48,4 +49,18 @@ test('withApi: 401 sem sessão, 403 para origem estranha, 500 sem vazar detalhe'
   assert.equal(r500.status, 500);
   assert.doesNotMatch(await r500.text(), /segredo interno/);
   assert.ok(new AuthError('FORBIDDEN', 403, 'x') instanceof Error);
+});
+
+test('HttpError: withApi devolve status e apiError para 404, 409 e 422 (com details só quando informado)', async () => {
+  Object.assign(process.env, env);
+  const req = () => new Request('http://localhost:3000/api/v1/x');
+  const r404 = await withApi(async () => { throw notFound(); })(req(), {});
+  assert.equal(r404.status, 404);
+  assert.deepEqual(await r404.json(), { error: { code: 'NOT_FOUND', message: 'Não encontrado.' } });
+  const r409 = await withApi(async () => { throw conflict('Alterado por outro usuário.', { expectedUpdatedAt: 'x' }); })(req(), {});
+  assert.equal(r409.status, 409);
+  assert.deepEqual((await r409.json()).error.details, { expectedUpdatedAt: 'x' });
+  const r422 = await withApi(async () => { throw unprocessable('Dados inválidos.', [{ path: 'a' }]); })(req(), {});
+  assert.equal(r422.status, 422);
+  assert.ok(new AuthError('FORBIDDEN', 403, 'x') instanceof HttpError);
 });
