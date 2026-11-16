@@ -48,7 +48,7 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | T-301 | Extrair `AnalysisEngine` de `src/lib/analysis.ts` (puro, sem store em memória) | T-003 | pronta [livre] |
 | T-302 | `document.extract` (texto por página no storage) | T-106, T-203 | bloqueada |
 | T-303 | `analysis.run` + cache por `inputHash` + rotas `/analyses` | T-105, T-302, T-007 (provedor; motor local liberado) | bloqueada |
-| T-304 | `HumanReview` API + regras de `reviewStatus` | T-101, T-103 | pronta |
+| T-304 | `HumanReview` API + regras de `reviewStatus` | T-101, T-103 | em revisão (branch `agente-03/ia`) |
 | T-305 | Aderência no servidor (`match.score`) a partir de `aderencia.ts` + capacidades — **reaproveitar `scoreCommercial` de `src/server/analysis/fit/commercial.ts`** (uma única nota comercial) | T-101, T-308 | pronta |
 | T-306 | Relatório PDF no worker (ADR-014) | T-105 | bloqueada |
 | T-307 | Testes de prompt injection com PDFs adversariais | T-301 | concluída (PR #6) |
