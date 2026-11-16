@@ -124,3 +124,11 @@ test('1.2.0: upserts da normalização derivam dos canônicos', () => {
   assert.equal(documentRef.safeParse({ externalId: '1', kind: 'tender_notice', title: 'Edital', sourceUrl: 'http://x', mimeType: 'application/pdf', publishedAt: null }).success, true);
   assert.equal(documentRef.safeParse({ externalId: '', kind: 'tender_notice', title: 'E', sourceUrl: 'nao-url', mimeType: 'x', publishedAt: null }).success, false);
 });
+
+test('1.3.0: fila source.enrich — dono 02 e payload só com sourceRecordId', () => {
+  assert.equal(jobs['source.enrich'].owner, '02');
+  assert.equal(jobs['source.enrich'].payload.safeParse({ sourceRecordId: id }).success, true);
+  assert.equal(jobs['source.enrich'].payload.safeParse({ sourceRecordId: 'x' }).success, false);
+  assert.equal(jobs['source.enrich'].payload.safeParse({ sourceRecordId: id, payload: {} }).success, true, 'campos extras são descartados, não aceitos como dado');
+  assert.deepEqual(jobs['source.enrich'].payload.parse({ sourceRecordId: id, payload: { a: 1 } }), { sourceRecordId: id });
+});
