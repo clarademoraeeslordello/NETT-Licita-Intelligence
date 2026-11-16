@@ -11,7 +11,8 @@ import { PncpConnector } from '../sources/pncp/connector';
 import { syncSource, type SyncLimits } from '../sources/sync';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { schema } from '../db';
-import { scoreOpportunity } from '../matching';
+import { fanOutProfile, refreshOpenOpportunities, scoreOpportunity } from '../matching';
+import { enqueueWith } from './enqueue';
 import { JobRegistry } from './registry';
 
 export type HandlerDeps = {
@@ -48,6 +49,13 @@ export function buildRegistry(deps: HandlerDeps): JobRegistry {
     // Agente 03 (T-305): uma nota por SearchProfile ativo; idempotente (mesmo hash/versão/perfil → não regrava).
     .register('match.score', async (payload) => {
       await scoreOpportunity(drizzle(deps.pool, { schema, casing: 'snake_case' }), payload);
+    })
+    // Agente 03 (contratos 1.4.0, ADR-025): só enfileiram match.score; quem pontua é o match.score.
+    .register('match.refresh', async () => {
+      await refreshOpenOpportunities({ db: drizzle(deps.pool, { schema, casing: 'snake_case' }), enqueue: (p) => enqueueWith(deps.boss, 'match.score', p) });
+    })
+    .register('match.profile', async ({ searchProfileId }) => {
+      await fanOutProfile({ db: drizzle(deps.pool, { schema, casing: 'snake_case' }), enqueue: (p) => enqueueWith(deps.boss, 'match.score', p) }, searchProfileId);
     });
 }
 

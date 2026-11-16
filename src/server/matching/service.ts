@@ -124,7 +124,7 @@ export async function scoreOpportunity(db: Db, p: { opportunityId: string; compa
       }
       continue;
     }
-    const values = { score: m.score, factors: m.factors, caps: m.caps, algorithmVersion: m.algorithmVersion, opportunityContentHash: opp.contentHash, computedAt: now };
+    const values = { score: m.score, factors: m.factors, caps: m.caps, algorithmVersion: m.algorithmVersion, opportunityContentHash: opp.contentHash, primaryCategory: m.primaryCategory, computedAt: now };
     await db
       .insert(matchScores)
       .values({ opportunityId: opp.id, companyId: row.companyId, searchProfileId: row.id, ...values })
@@ -147,25 +147,31 @@ export async function getMatchSummaries(db: Db, companyId: string, opportunityId
   const ids = [...new Set(opportunityIds)];
   if (ids.length === 0) return {};
   if (ids.length > MAX_SUMMARY_IDS) throw new RangeError(`no máximo ${MAX_SUMMARY_IDS} oportunidades por consulta`);
-  const best = await db
-    .select({ opportunityId: matchScores.opportunityId, score: sql<number>`max(${matchScores.score})::int` })
+  const stored = await db
+    .select({ opportunityId: matchScores.opportunityId, score: matchScores.score, primaryCategory: matchScores.primaryCategory })
     .from(matchScores)
     .innerJoin(searchProfiles, and(eq(searchProfiles.id, matchScores.searchProfileId), eq(searchProfiles.active, true)))
-    .where(and(eq(matchScores.companyId, companyId), inArray(matchScores.opportunityId, ids)))
-    .groupBy(matchScores.opportunityId);
-  if (best.length === 0) return {};
-  const scored = best.map((b) => b.opportunityId);
-  const [oppRows, itemRows] = await Promise.all([
-    db.select().from(opportunities).where(inArray(opportunities.id, scored)),
-    db.select({ opportunityId: opportunityItems.opportunityId, number: opportunityItems.number, description: opportunityItems.description }).from(opportunityItems).where(inArray(opportunityItems.opportunityId, scored)),
-  ]);
-  const itemsBy = new Map<string, Pick<OpportunityItem, 'number' | 'description'>[]>();
-  for (const it of itemRows) itemsBy.set(it.opportunityId, [...(itemsBy.get(it.opportunityId) ?? []), it]);
+    .where(and(eq(matchScores.companyId, companyId), inArray(matchScores.opportunityId, ids)));
+  // Best score per opportunity; on a tie prefer a row that carries a category.
+  const best = new Map<string, { score: number; primaryCategory: NettCategory | null }>();
+  for (const r of stored) {
+    const cur = best.get(r.opportunityId);
+    if (!cur || r.score > cur.score || (r.score === cur.score && cur.primaryCategory === null && r.primaryCategory !== null)) best.set(r.opportunityId, { score: r.score, primaryCategory: r.primaryCategory });
+  }
   const out: Record<string, MatchSummary> = {};
-  for (const row of oppRows) {
-    const stored = best.find((b) => b.opportunityId === row.id)!;
-    const { primaryCategory } = computeMatch({ opportunity: toOpportunity(row), items: itemsBy.get(row.id) ?? [], profile: null });
-    out[row.id] = { score: stored.score, band: bandOf(stored.score), primaryCategory };
+  const legacy: string[] = []; // rows written before 1.4.0 (no stored category): derive as a fallback
+  for (const [id, b] of best) {
+    out[id] = { score: b.score, band: bandOf(b.score), primaryCategory: b.primaryCategory };
+    if (b.primaryCategory === null) legacy.push(id);
+  }
+  if (legacy.length > 0) {
+    const [oppRows, itemRows] = await Promise.all([
+      db.select().from(opportunities).where(inArray(opportunities.id, legacy)),
+      db.select({ opportunityId: opportunityItems.opportunityId, number: opportunityItems.number, description: opportunityItems.description }).from(opportunityItems).where(inArray(opportunityItems.opportunityId, legacy)),
+    ]);
+    const itemsBy = new Map<string, Pick<OpportunityItem, 'number' | 'description'>[]>();
+    for (const it of itemRows) itemsBy.set(it.opportunityId, [...(itemsBy.get(it.opportunityId) ?? []), it]);
+    for (const row of oppRows) out[row.id]!.primaryCategory = computeMatch({ opportunity: toOpportunity(row), items: itemsBy.get(row.id) ?? [], profile: null }).primaryCategory;
   }
   return out;
 }
