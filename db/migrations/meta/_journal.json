@@ -57,6 +57,20 @@
       "when": 1794853675409,
       "tag": "0007_match_score_primary_category",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794854030357,
+      "tag": "0008_opportunity_search",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794854031552,
+      "tag": "0009_drop_opportunity_expression_search",
+      "breakpoints": true
     }
   ]
 }
