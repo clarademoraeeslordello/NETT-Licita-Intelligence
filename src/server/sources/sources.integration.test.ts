@@ -19,7 +19,7 @@ import type { FetchPageResult, SyncableConnector } from './connector';
 import { normalizeSourceRecord } from './normalize-record';
 import fixturesReais from './pncp/__fixtures__/compras-reais.json';
 import { normalizePncp } from './pncp/normalize';
-import { syncSource } from './sync';
+import { payloadHash as payloadHashOf, syncSource } from './sync';
 
 const appUrl = process.env.DATABASE_URL_TEST;
 const migratorUrl = process.env.DATABASE_URL_MIGRATOR;
@@ -210,6 +210,45 @@ test('registro fora de ordem não sobrescreve versão mais nova', async () => {
   assert.equal(r.status, 'superseded');
   const [opp] = await db().select().from(s.opportunities).where(sql`${s.opportunities.objectDescription} like 'versão antiga%'`);
   assert.equal(opp, undefined);
+});
+
+test('versão só com listagem preserva meEppBenefit calculado dos itens (e atualiza o resto)', async () => {
+  const k = normalizePncp(fx[0]);
+  if ('skip' in k) throw new Error(k.skip);
+  const chave = k.opportunity.canonicalKey;
+  const [antes] = await db().select().from(s.opportunities).where(eq(s.opportunities.canonicalKey, chave));
+  assert.equal(antes!.meEppBenefit, 'none', 'calculado dos itens enriquecidos');
+  const itensAntes = (await db().select().from(s.opportunityItems).where(eq(s.opportunityItems.opportunityId, antes!.id))).length;
+  assert.ok(itensAntes > 0);
+  await boss.deleteQueuedJobs('match.score');
+
+  const [src] = await db().select().from(s.sources).where(eq(s.sources.key, KEY));
+  const listagem = { compra: { ...fx[0].compra, dataEncerramentoProposta: '2027-01-15T09:00:00' } }; // sem itens/arquivos
+  const [rec] = await db()
+    .insert(s.sourceRecords)
+    .values({ sourceId: src!.id, externalId: fx[0].compra.numeroControlePNCP, payload: listagem, payloadHash: payloadHashOf(listagem) })
+    .returning({ id: s.sourceRecords.id });
+  const r = await normalizeSourceRecord(deps(), rec!.id);
+  assert.equal(r.status, 'normalized');
+
+  const [depois] = await db().select().from(s.opportunities).where(eq(s.opportunities.canonicalKey, chave));
+  assert.equal(depois!.meEppBenefit, 'none', 'não volta para unknown');
+  assert.equal(depois!.proposalsCloseAt!.toISOString(), '2027-01-15T12:00:00.000Z', 'o restante da listagem é atualizado');
+  assert.notEqual(depois!.contentHash, antes!.contentHash);
+  assert.equal((await db().select().from(s.opportunityItems).where(eq(s.opportunityItems.opportunityId, antes!.id))).length, itensAntes, 'itens existentes não são apagados');
+  assert.ok((await boss.findJobs<{ opportunityId: string }>('match.score', { queued: true })).some((j) => j.data.opportunityId === antes!.id), 'mudança real reenfileira match.score');
+
+  // Oportunidade nova só com listagem continua 'unknown' (nada a preservar).
+  const nova = { compra: { ...fx[1].compra, numeroControlePNCP: `${fx[1].compra.numeroControlePNCP.slice(0, 17)}${String(base + 777).padStart(6, '0')}/2026`, sequencialCompra: base + 777 } };
+  const [rec2] = await db()
+    .insert(s.sourceRecords)
+    .values({ sourceId: src!.id, externalId: nova.compra.numeroControlePNCP, payload: nova, payloadHash: payloadHashOf(nova) })
+    .returning({ id: s.sourceRecords.id });
+  const r2 = await normalizeSourceRecord(deps(), rec2!.id);
+  assert.equal(r2.status, 'normalized');
+  if (r2.status !== 'normalized') return;
+  const [op2] = await db().select().from(s.opportunities).where(eq(s.opportunities.id, r2.opportunityId));
+  assert.equal(op2!.meEppBenefit, 'unknown');
 });
 
 test('payload inválido → skipped com motivo, sem Opportunity', async () => {

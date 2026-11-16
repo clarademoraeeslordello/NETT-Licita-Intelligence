@@ -19,6 +19,7 @@ import * as s from '../db/schema';
 import { enqueueWith } from '../jobs/enqueue';
 import { log } from '../jobs/registry';
 import type { SyncableConnector } from './connector';
+import { contentHashOf } from './pncp/normalize';
 
 const data = (v: string | null) => (v === null ? null : new Date(v));
 
@@ -81,10 +82,17 @@ export async function normalizeSourceRecord(deps: NormalizeDeps, sourceRecordId:
       sessionAt: data(result.opportunity.sessionAt),
     };
     const [anterior] = await db
-      .select({ id: s.opportunities.id, contentHash: s.opportunities.contentHash })
+      .select({ id: s.opportunities.id, contentHash: s.opportunities.contentHash, meEppBenefit: s.opportunities.meEppBenefit })
       .from(s.opportunities)
       .where(eq(s.opportunities.canonicalKey, o.canonicalKey))
       .for('update');
+    // Registro só com a listagem (sem itens): o benefício ME/EPP é derivado dos itens e não pode voltar a
+    // 'unknown' por falta deles. Preserva o já calculado e re-deriva o hash de forma determinística.
+    const payloadTemItens = Array.isArray((r.payload as { itens?: unknown } | null)?.itens);
+    if (!payloadTemItens && anterior && o.meEppBenefit === 'unknown' && anterior.meEppBenefit !== 'unknown') {
+      o.meEppBenefit = anterior.meEppBenefit;
+      o.contentHash = contentHashOf({ listing: o.contentHash, meEppBenefit: o.meEppBenefit });
+    }
     const valores = { ...o, primarySourceId: r.sourceId };
     const [salva] = await db
       .insert(s.opportunities)
