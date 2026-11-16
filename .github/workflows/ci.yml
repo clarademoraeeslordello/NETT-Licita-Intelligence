@@ -16,6 +16,7 @@ on:
       - 'src/server/http/**'
       - 'src/server/storage/**'
       - 'src/server/sources/**'
+      - 'src/server/pipeline/**'
       - 'src/lib/pncp/**'
       - 'src/app/layout.tsx'
       - 'src/middleware.ts'
@@ -102,6 +103,7 @@ jobs:
       - run: npm run test:db
       - run: npm run test:http:integration
       - run: npm run test:jobs
+      - run: npm run test:sources:integration
       - name: Keycloak local (realm de docker/keycloak)
         run: |
           docker run -d --name keycloak -p 8180:8180 -p 9000:9000 \
