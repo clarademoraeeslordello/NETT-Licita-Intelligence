@@ -1,7 +1,8 @@
 /** Unidade T-107/T-108. Executar: npm run test:http */
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildCsp } from '../../middleware';
+import { NextRequest } from 'next/server';
+import { buildCsp, middleware } from '../../middleware';
 import { sanitizeMetadata } from '../audit';
 import { clientIp, hashIdentifier } from './client-ip';
 
@@ -45,4 +46,17 @@ test('metadata de auditoria: remove chaves sensíveis e limita tamanho', () => {
   assert.equal(out.nested.ok, 1);
   assert.ok(out.longo.length <= 501);
   assert.equal(out.lista.length, 50);
+});
+
+test('middleware: x-nett-pathname/x-nett-search refletem a URL e ignoram valores enviados pelo cliente', () => {
+  const req = new NextRequest('http://localhost:3000/radar?uf=RN&q=a', {
+    headers: { 'x-nett-pathname': '//evil.test', 'x-nett-search': '?x=1', 'x-request-id': 'abcdefgh-1234' },
+  });
+  const res = middleware(req);
+  assert.equal(res.headers.get('x-middleware-request-x-nett-pathname'), '/radar');
+  assert.equal(res.headers.get('x-middleware-request-x-nett-search'), '?uf=RN&q=a');
+  assert.equal(res.headers.get('x-request-id'), 'abcdefgh-1234');
+  assert.match(res.headers.get('content-security-policy') ?? '', /nonce-/);
+  const semQuery = middleware(new NextRequest('http://localhost:3000/pipeline'));
+  assert.equal(semQuery.headers.get('x-middleware-request-x-nett-search'), '');
 });

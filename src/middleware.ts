@@ -50,6 +50,10 @@ export function middleware(request: NextRequest) {
 
   const headers = new Headers(request.headers);
   headers.set('x-nonce', nonce);
+  // Caminho e query da requisição para o layout montar o returnTo do login (T-403). Sempre sobrescritos:
+  // um valor enviado pelo cliente nunca chega ao layout. O layout ainda sanitiza o que lê.
+  headers.set('x-nett-pathname', request.nextUrl.pathname);
+  headers.set('x-nett-search', request.nextUrl.search);
   headers.set('x-request-id', requestId);
   headers.set('content-security-policy', csp);
 
