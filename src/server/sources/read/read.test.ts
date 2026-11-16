@@ -2,8 +2,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { opportunityListQuery, priceQuery, syncRequest } from '@/contracts/api';
+import { HttpError } from '../../http/errors';
 import { decodeCursor, encodeCursor, InvalidCursor } from './cursor';
-import { parseQuery } from './http';
+import { parseQuery, uuidParam } from './http';
 import { escapeLike } from './opportunities';
 import { effectiveStatus } from './status';
 
@@ -35,30 +36,45 @@ test('cursor: ida e volta, ordenação diferente e lixo são rejeitados', () => 
   for (const ruim of ['', 'x', Buffer.from('{"v":2}').toString('base64url'), Buffer.from('nao json').toString('base64url')]) assert.throws(() => decodeCursor(ruim, 'published_desc'), InvalidCursor);
 });
 
+const erro400 = (fn: () => unknown) => {
+  try {
+    fn();
+  } catch (e) {
+    return e instanceof HttpError && e.status === 400 && e.code === 'BAD_REQUEST' ? e : null;
+  }
+  return null;
+};
+
 test('consulta de oportunidades: padrões, listas e limites', () => {
-  const ok = parseQuery(opportunityListQuery, new URLSearchParams('q=%20software%20&ufs=rj,SP&modalities=6,8&status=receiving_proposals,published&minValue=10.5&limit=5'));
-  assert.equal(ok.ok, false, 'UF minúscula é inválida');
-  const certo = parseQuery(opportunityListQuery, new URLSearchParams('q=%20software%20&ufs=RJ,SP&modalities=6,8&status=receiving_proposals,published&minValue=10.5&sort=close_asc&limit=5'));
-  assert.ok(certo.ok);
-  if (!certo.ok) return;
+  assert.ok(erro400(() => parseQuery(opportunityListQuery, new URLSearchParams('ufs=rj,SP'))), 'UF minúscula é inválida');
+  const d = parseQuery(opportunityListQuery, new URLSearchParams('q=%20software%20&ufs=RJ,SP&modalities=6,8&status=receiving_proposals,published&minValue=10.5&sort=close_asc&limit=5'));
   assert.deepEqual(
-    { q: certo.data.q, ufs: certo.data.ufs, modalities: certo.data.modalities, status: certo.data.status, minValue: certo.data.minValue, sort: certo.data.sort, limit: certo.data.limit },
+    { q: d.q, ufs: d.ufs, modalities: d.modalities, status: d.status, minValue: d.minValue, sort: d.sort, limit: d.limit },
     { q: 'software', ufs: ['RJ', 'SP'], modalities: [6, 8], status: ['receiving_proposals', 'published'], minValue: '10.5', sort: 'close_asc', limit: 5 },
   );
   const padrao = parseQuery(opportunityListQuery, new URLSearchParams(''));
-  assert.ok(padrao.ok && padrao.data.limit === 30 && padrao.data.sort === 'published_desc');
-  for (const ruim of ['limit=0', 'limit=101', 'q=a', 'status=tudo', 'minValue=1e3', 'modalities=x', 'sort=preco', 'closesFrom=ontem']) {
-    assert.equal(parseQuery(opportunityListQuery, new URLSearchParams(ruim)).ok, false, ruim);
+  assert.ok(padrao.limit === 30 && padrao.sort === 'published_desc');
+  for (const ruim of ['limit=0', 'limit=101', 'q=a', 'q=ab', 'status=tudo', 'minValue=1e3', 'modalities=x', 'sort=preco', 'closesFrom=ontem']) {
+    assert.ok(erro400(() => parseQuery(opportunityListQuery, new URLSearchParams(ruim))), ruim);
   }
+  const e = erro400(() => parseQuery(opportunityListQuery, new URLSearchParams('limit=0')))!;
+  assert.deepEqual((e.details as Array<{ path: string }>).map((i) => i.path), ['limit'], 'details só com campo e mensagem');
 });
 
-test('consulta de preços exige 3+ caracteres; sync valida modo', () => {
-  assert.equal(parseQuery(priceQuery, new URLSearchParams('q=ab')).ok, false);
-  assert.equal(parseQuery(priceQuery, new URLSearchParams('')).ok, false);
-  assert.ok(parseQuery(priceQuery, new URLSearchParams('q=papel&ufs=RN')).ok);
+test('consulta de preços exige 3+ caracteres; sync valida modo; uuid de rota', () => {
+  assert.ok(erro400(() => parseQuery(priceQuery, new URLSearchParams('q=ab'))));
+  assert.ok(erro400(() => parseQuery(priceQuery, new URLSearchParams(''))));
+  assert.equal(parseQuery(priceQuery, new URLSearchParams('q=papel&ufs=RN')).q, 'papel');
   assert.deepEqual(syncRequest.parse({}), { mode: 'incremental' });
   assert.equal(syncRequest.safeParse({ mode: 'tudo' }).success, false);
   assert.equal(syncRequest.safeParse({ since: 'ontem' }).success, false);
+  assert.equal(uuidParam('1c8e0a2f-3d4b-4c6e-9f70-8b9cad0e1f30'), '1c8e0a2f-3d4b-4c6e-9f70-8b9cad0e1f30');
+  assert.ok(erro400(() => uuidParam('nao-uuid')));
+});
+
+test('cursor inválido é HttpError 400', () => {
+  const e = new InvalidCursor();
+  assert.ok(e instanceof HttpError && e.status === 400 && e.code === 'BAD_REQUEST');
 });
 
 test('escapeLike neutraliza curingas', () => {

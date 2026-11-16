@@ -13,7 +13,7 @@ import { opportunityListQuery, opportunityPage, opportunityView, pricePage, publ
 import type { Db } from '../../db';
 import * as s from '../../db/schema';
 import { InvalidCursor } from './cursor';
-import { getOpportunity, listItems, listOpportunities, listPublicDocuments, opportunityExists } from './opportunities';
+import { getOpportunity, listItems, listOpportunities, listPublicDocuments, opportunityExists, opportunitySearchCondition, searchPattern } from './opportunities';
 import { listPrices } from './prices';
 import { listSources } from './sources';
 import { effectiveStatus, effectiveStatusCondition, type EffectiveStatus } from './status';
@@ -51,7 +51,7 @@ before(async () => {
   [{ id: companyId }] = await db.insert(s.companies).values({ legalName: `Empresa ${run}`, cnpj: String(Date.now()).slice(-10).padStart(14, '5'), size: 'ME' }).returning({ id: s.companies.id });
   const d = (iso: string) => new Date(iso);
   const rows: Array<[string, Partial<typeof s.opportunities.$inferInsert>]> = [
-    ['aberta1', { proposalsCloseAt: d('2026-11-20T12:00:00Z'), publishedAt: d('2026-11-10T12:00:00Z'), uf: 'RJ', modalityCode: 6, estimatedValue: '1000.0000', title: 'Aquisição de software de gestão' }],
+    ['aberta1', { proposalsCloseAt: d('2026-11-20T12:00:00Z'), publishedAt: d('2026-11-10T12:00:00Z'), uf: 'RJ', modalityCode: 6, estimatedValue: '1000.0000', title: 'Aquisição de software de gestão', municipality: 'São João del-Rei' }],
     ['aberta2', { proposalsCloseAt: d('2026-11-18T12:00:00Z'), publishedAt: d('2026-11-12T12:00:00Z'), uf: 'SP', modalityCode: 8, estimatedValue: '50000.5000' }],
     ['limite', { proposalsCloseAt: d('2026-11-16T15:00:00Z'), publishedAt: d('2026-11-11T12:00:00Z'), uf: 'RJ', modalityCode: 6 }], // = now → encerrada
     ['encerrada', { proposalsCloseAt: d('2026-11-01T12:00:00Z'), publishedAt: d('2026-10-20T12:00:00Z'), uf: 'RJ', modalityCode: 4, estimatedValue: '700.0000' }],
@@ -116,7 +116,11 @@ test('listagem: filtros de UF, modalidade, valor, busca, janela de encerramento'
   assert.deepEqual(await ids_('minValue=50000.5'), [ids.aberta2], 'comparação numérica exata');
   assert.deepEqual(await ids_('maxValue=700'), [ids.encerrada], 'valor desconhecido fica fora quando há limite');
   assert.deepEqual(await ids_('q=software'), [ids.aberta1]);
-  assert.deepEqual(await ids_('q=%25%25'), [], 'curinga é literal');
+  assert.deepEqual(await ids_('q=%25%25%25'), [], 'curinga é literal');
+  assert.deepEqual(await ids_('q=GESTAO'), [ids.aberta1], 'sem acento e sem caixa: "gestao" acha "gestão"');
+  assert.deepEqual(await ids_('q=sao%20joao'), [ids.aberta1], 'busca também no município, sem acento');
+  assert.deepEqual(await ids_('q=gest%C3%A3o%20software'), [ids.aberta1], 'todas as palavras, qualquer ordem, com acento');
+  assert.deepEqual(await ids_('q=software%20inexistente'), [], 'uma palavra ausente elimina');
   assert.deepEqual(await ids_('q=%C3%93RG%C3%83O%20ABERTA2'), [ids.aberta2], 'insensível a caixa (ILIKE)');
   assert.deepEqual(await ids_('closesFrom=2026-11-18&closesTo=2026-11-20'), [ids.aberta1, ids.aberta2].sort(), 'data pura inclui o dia inteiro em Brasília');
   assert.deepEqual(await ids_('closesFrom=2026-11-20&closesTo=2026-11-20'), [ids.aberta1], 'um único dia');
@@ -148,6 +152,21 @@ test('paginação por cursor: percorre tudo sem repetir nem pular, nas duas orde
   const porEncerramento = (await listOpportunities(db, q('sort=close_asc&limit=100'), NOW)).items.map((i) => i.id);
   const semEncerramento = [ids.semdata!, ids.suspensa!, ids.desconhecida!];
   assert.deepEqual(porEncerramento.slice(-3).sort(), semEncerramento.sort(), 'sem encerramento por último');
+});
+
+test('busca textual usa os índices de trigramas (sem varredura completa)', async () => {
+  const plano = async (consulta: ReturnType<typeof sql>) =>
+    db.transaction(async (tx) => {
+      await tx.execute(sql`set local enable_seqscan = off`); // base de teste é pequena: força o planejador a escolher entre índices
+      const r = await tx.execute(sql`explain (format text) ${consulta}`);
+      return (r.rows as Array<Record<string, string>>).map((x) => Object.values(x)[0]).join('\n');
+    });
+  const oport = await plano(sql`select id from opportunities where ${opportunitySearchCondition('software')}`);
+  assert.match(oport, /opportunities_search_trgm_idx/, oport);
+  assert.doesNotMatch(oport, /Seq Scan on opportunities/);
+  const itens = await plano(sql`select id from opportunity_items i where public.search_text(i.description) like ${searchPattern('papel')}`);
+  assert.match(itens, /opportunity_items_search_trgm_idx/, itens);
+  assert.doesNotMatch(itens, /Seq Scan on opportunity_items/);
 });
 
 test('cursor inválido ou de outra ordenação lança InvalidCursor', async () => {

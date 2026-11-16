@@ -3,10 +3,12 @@
  * Cursor inválido ou de outra ordenação → `InvalidCursor` (a rota responde 400).
  */
 import { z } from 'zod';
+import { HttpError } from '../../http/errors';
 
-export class InvalidCursor extends Error {
+/** Cursor inválido = 400 (ADR-022): `withApi` converte em `apiError`. */
+export class InvalidCursor extends HttpError {
   constructor() {
-    super('cursor inválido');
+    super('BAD_REQUEST', 400, 'Cursor inválido.');
     this.name = 'InvalidCursor';
   }
 }

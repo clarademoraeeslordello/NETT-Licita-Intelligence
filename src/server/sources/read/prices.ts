@@ -10,7 +10,7 @@ import { sql, type SQL } from 'drizzle-orm';
 import type { PricePage, PriceQuery } from '@/contracts/api';
 import type { Db } from '../../db';
 import { decodeCursor, encodeCursor } from './cursor';
-import { escapeLike, EPOCH_ISO } from './opportunities';
+import { EPOCH_ISO, searchPattern, searchTokens } from './opportunities';
 
 type PriceRow = Record<string, unknown> & {
   item_id: string;
@@ -35,8 +35,11 @@ type PriceRow = Record<string, unknown> & {
 const SORT = 'awarded_desc';
 
 export async function listPrices(db: Db, q: PriceQuery): Promise<PricePage> {
-  const like = `%${escapeLike(q.q)}%`;
-  const base: SQL[] = [sql`i.awarded_unit_value is not null`, sql`i.description ilike ${like}`];
+  // Índice opportunity_items_search_trgm_idx (migration 0006): mesma expressão.
+  const base: SQL[] = [
+    sql`i.awarded_unit_value is not null`,
+    ...searchTokens(q.q).map((t) => sql`public.search_text(i.description) like ${searchPattern(t)}`),
+  ];
   if (q.ufs) base.push(sql`o.uf in (${sql.join(q.ufs.map((u) => sql`${u}::uf`), sql`, `)})`);
   const baseWhere = sql.join(base, sql` and `);
 
