@@ -5,6 +5,7 @@
  * requireCompanyAccess. Um id forjado no cookie é simplesmente ignorado.
  */
 import type { CompanyRole } from '@/server/auth';
+import { safeReturnTo } from '@/server/auth/return-to';
 
 export const COOKIE_EMPRESA = 'nett_empresa';
 export const COOKIE_EMPRESA_MAX_AGE_S = 30 * 24 * 60 * 60;
@@ -30,8 +31,9 @@ export const ROTULO_PAPEL: Record<CompanyRole, string> = {
 
 /** Caminho de retorno do login a partir do cabeçalho de caminho (se o middleware o fornecer). */
 export function caminhoDeRetorno(pathname: string | null | undefined, search: string | null | undefined): string {
-  if (!pathname || !pathname.startsWith('/') || pathname.startsWith('//')) return '/';
-  return `${pathname}${search && search.startsWith('?') ? search : ''}`;
+  if (!pathname) return '/';
+  // safeReturnTo (módulo de login) barra '//', '/\\', caracteres de controle e URLs absolutas.
+  return safeReturnTo(`${pathname}${search && search.startsWith('?') ? search : ''}`);
 }
 
 export function urlDeLogin(retorno: string): string {

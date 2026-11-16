@@ -30,5 +30,10 @@ test('retorno do login só aceita caminho interno', () => {
   assert.equal(caminhoDeRetorno('//evil.test', ''), '/');
   assert.equal(caminhoDeRetorno('https://evil.test', ''), '/');
   assert.equal(caminhoDeRetorno(null, null), '/');
+  // Open redirect: navegadores tratam '/\\host' como '//host'.
+  for (const ruim of ['/\\evil.test', '/\\/evil.test', '/a\nb', '/a\rb', 'javascript:alert(1)']) {
+    assert.equal(caminhoDeRetorno(ruim, ''), '/', JSON.stringify(ruim));
+  }
+  assert.equal(caminhoDeRetorno('/radar', '?uf=RN&q=a'), '/radar?uf=RN&q=a');
   assert.equal(urlDeLogin('/radar?q=1'), '/api/auth/login?returnTo=%2Fradar%3Fq%3D1');
 });
