@@ -9,6 +9,9 @@ import type { SyncableConnector } from '../sources/connector';
 import { markNormalizationError, normalizeSourceRecord } from '../sources/normalize-record';
 import { PncpConnector } from '../sources/pncp/connector';
 import { syncSource, type SyncLimits } from '../sources/sync';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { schema } from '../db';
+import { scoreOpportunity } from '../matching';
 import { JobRegistry } from './registry';
 
 export type HandlerDeps = {
@@ -41,6 +44,10 @@ export function buildRegistry(deps: HandlerDeps): JobRegistry {
         if (ctx.retryCount >= JOB_DEFAULTS.retryLimit) await markNormalizationError(deps.pool, sourceRecordId, error instanceof Error ? error.message : String(error));
         throw error;
       }
+    })
+    // Agente 03 (T-305): uma nota por SearchProfile ativo; idempotente (mesmo hash/versão/perfil → não regrava).
+    .register('match.score', async (payload) => {
+      await scoreOpportunity(drizzle(deps.pool, { schema, casing: 'snake_case' }), payload);
     });
 }
 

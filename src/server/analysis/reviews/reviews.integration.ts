@@ -253,3 +253,45 @@ test('GET: leitor lista, ordem do mais recente, paginação por cursor sem repet
   assert.equal(b.items[0]!.companyId, B);
   await assert.rejects(handlersFor(consultantB).GET(getReq({ subjectType: 'ai_analysis', subjectId: target }), ctxOf(A)), (e) => e instanceof AuthError && e.status === 403);
 });
+
+/* ------------------- T-304b: "o parecer mais recente vale" sob concorrência ------------------- */
+
+/** Write order = xmin order (each insert is serialized by the advisory lock, so xids are assigned in lock order). The database sorts, so microseconds are kept. */
+async function writeOrder(subjectId: string) {
+  const q = async (order: string) => (await db.execute(sql.raw(`select id, decision from human_reviews where subject_id = '${subjectId}' order by ${order}`))).rows as { id: string; decision: string }[];
+  const byWrite = await q('xmin::text::bigint asc');
+  const byCreated = await q('created_at asc, id asc');
+  return { byWrite, byCreated, lastWritten: byWrite.at(-1)! };
+}
+
+test('concorrência: createdAt segue a ordem de gravação e o último gravado vence (análise pública e bid_decision)', async () => {
+  const target = await analysis({ companyId: null, kind: 'tender_summary' });
+  const [oppRow] = await db
+    .insert(s.opportunities)
+    .values({ canonicalKey: `pncp:rc${run}-2026-9`, primarySourceId: (await db.select({ id: s.sources.id }).from(s.sources).limit(1))[0]!.id, title: 't', objectDescription: 'o', agencyName: 'Prefeitura Fictícia', sphere: 'municipal', status: 'receiving_proposals', url: 'https://pncp.gov.br/y', contentHash: hash })
+    .returning({ id: s.opportunities.id });
+  for (const [subjectType, subjectId] of [['ai_analysis', target], ['bid_decision', oppRow!.id]] as const) {
+    for (let round = 0; round < 3; round++) {
+      await Promise.all(
+        Array.from({ length: 12 }, (_, i) =>
+          createReview(db, { companyId: A, reviewerUserId: consultantA, input: input({ subjectType, subjectId, decision: i % 2 ? 'approved' : 'rejected', comment: i % 2 ? null : `motivo ${round}-${i}` }) }),
+        ),
+      );
+    }
+    const { byWrite, byCreated, lastWritten } = await writeOrder(subjectId);
+    assert.equal(byWrite.length, 36);
+    assert.deepEqual(byCreated.map((r) => r.id), byWrite.map((r) => r.id), `${subjectType}: ordem por created_at difere da ordem de gravação`);
+    if (subjectType === 'ai_analysis') {
+      const expected = lastWritten.decision === 'rejected' ? 'rejected' : 'approved';
+      assert.equal(await effectiveReviewStatus(db, A, subjectId), expected);
+    } else {
+      const [latest] = await db
+        .select({ id: s.humanReviews.id })
+        .from(s.humanReviews)
+        .where(and(eq(s.humanReviews.companyId, A), eq(s.humanReviews.subjectId, subjectId)))
+        .orderBy(sql`created_at desc, id desc`)
+        .limit(1);
+      assert.equal(latest!.id, lastWritten.id);
+    }
+  }
+});

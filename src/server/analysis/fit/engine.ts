@@ -23,7 +23,7 @@ import {
   type SearchProfile,
 } from '../../../contracts';
 import type { capabilityKind } from '../../../contracts';
-import { classify, segmentsFromPassages, type Segment } from './classifier';
+import { classify, opportunitySegments, segmentsFromPassages } from './classifier';
 import { scoreCommercial } from './commercial';
 import { NETT_DICTIONARY_V1, type Dictionary } from './dictionary';
 import { EvidenceRegistry } from './evidence';
@@ -136,11 +136,7 @@ export async function runFitAssessment(rawInput: FitAssessmentInput, options: Fi
   const safe = passages.filter((p) => !hasEmbeddedInstruction(p.text));
 
   // 2. Semantic classification.
-  const oppSegments: Segment[] = [
-    { text: opp.objectDescription, weight: 1, origin: { type: 'opportunity', field: 'objectDescription' } },
-    ...(opp.title ? [{ text: opp.title, weight: 0.8, origin: { type: 'opportunity' as const, field: 'title' } }] : []),
-    ...input.items.map((it) => ({ text: it.description, weight: 0.9, origin: { type: 'opportunity' as const, field: `items[${it.number}]` } })),
-  ];
+  const oppSegments = opportunitySegments(opp, input.items);
   const docSegments = segmentsFromPassages(safe, dictionary);
   const objectSegments = [...oppSegments, ...docSegments.filter((s) => s.origin.type === 'passage' && s.origin.passage.sectionKind === 'object')];
   const classification = classify([...oppSegments, ...docSegments], dictionary, objectSegments, input.searchProfile?.excludeTerms ?? []);

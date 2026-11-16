@@ -94,6 +94,10 @@ export async function createReview(db: Db, { companyId, reviewerUserId, input, c
     throw new ReviewError('CORRECTIONS_NOT_SUPPORTED', 422, 'approved_with_changes só se aplica a revisões de ai_analysis.');
 
   return db.transaction(async (tx) => {
+    // Serialize reviews of the same company × subject. Together with clock_timestamp() below this makes
+    // "the most recent review wins" true: now() is the START of the transaction, so a review that started
+    // earlier but committed later would otherwise sort as older. Lock order is always advisory → row.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`human_review:${companyId}:${input.subjectType}:${input.subjectId}`}, 0))`);
     let ownsAnalysisRow = false;
     if (input.subjectType === 'ai_analysis') {
       const [a] = await tx.select().from(aiAnalyses).where(eq(aiAnalyses.id, input.subjectId)).for('update');
@@ -113,7 +117,7 @@ export async function createReview(db: Db, { companyId, reviewerUserId, input, c
 
     const [row] = await tx
       .insert(humanReviews)
-      .values({ companyId, subjectType: input.subjectType, subjectId: input.subjectId, reviewerUserId, decision: input.decision, corrections: input.corrections, comment: input.comment })
+      .values({ companyId, subjectType: input.subjectType, subjectId: input.subjectId, reviewerUserId, decision: input.decision, corrections: input.corrections, comment: input.comment, createdAt: sql`clock_timestamp()` })
       .returning();
     if (!row) throw new Error('human_reviews: insert não retornou linha');
 

@@ -5,6 +5,7 @@
  *     ("a contratada deverá observar a LGPD") almost nothing;
  *  3. noisy-OR across distinct concepts (diminishing returns).
  */
+import type { Opportunity, OpportunityItem } from '../../../contracts';
 import type { Dictionary, NettCategory } from './dictionary';
 import type { Passage, SectionKind } from './sections';
 import { matchesWithin, normalize, tokens } from './text';
@@ -33,6 +34,15 @@ export const SECTION_WEIGHT: Record<SectionKind, number> = {
 };
 
 const BOILERPLATE_FACTOR = 0.15;
+
+/** Segments taken from the Opportunity itself (title, object, items). Shared by fit_assessment and match.score. */
+export function opportunitySegments(opp: Pick<Opportunity, 'objectDescription' | 'title'>, items: Pick<OpportunityItem, 'number' | 'description'>[]): Segment[] {
+  return [
+    { text: opp.objectDescription, weight: 1, origin: { type: 'opportunity', field: 'objectDescription' } },
+    ...(opp.title ? [{ text: opp.title, weight: 0.8, origin: { type: 'opportunity' as const, field: 'title' } }] : []),
+    ...items.map((it) => ({ text: it.description, weight: 0.9, origin: { type: 'opportunity' as const, field: `items[${it.number}]` } })),
+  ];
+}
 
 export function segmentsFromPassages(passages: Passage[], dictionary: Dictionary): Segment[] {
   const boilerplate = dictionary.boilerplate.map(normalize);

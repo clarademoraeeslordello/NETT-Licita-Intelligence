@@ -21,6 +21,9 @@ export function segmentEvidence(s: Segment, registry: EvidenceRegistry, rational
   return s.origin.type === 'passage' ? registry.fromPassage(s.origin.passage, rationale) : registry.fromOpportunity(s.origin.field, s.text, rationale);
 }
 
+/** Single definition of the commercial band (also used by match.score summaries). */
+export const bandOf = (score: number): 'high' | 'medium' | 'low' => (score >= 70 ? 'high' : score >= 45 ? 'medium' : 'low');
+
 export type CommercialScore = FitAssessmentResult['commercial'] & { daysToClose: number | null; excludedBy: string | null };
 
 export function scoreCommercial(
@@ -127,7 +130,7 @@ export function scoreCommercial(
   }
   return {
     score,
-    band: score >= 70 ? 'high' : score >= 45 ? 'medium' : 'low',
+    band: bandOf(score),
     primaryCategory: fit?.category ?? null,
     categories,
     factors,

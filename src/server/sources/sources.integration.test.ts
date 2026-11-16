@@ -355,7 +355,8 @@ test('falha de enriquecimento: grava a listagem (nada perdido), pausa enriquecim
 test('handler registrado: source.sync e source.normalize via JobRegistry', async () => {
   fake.pages = [[]];
   const reg = buildRegistry({ pool, boss, connectors: new Map([[KEY, fake]]) });
-  assert.deepEqual(reg.names().sort(), ['source.normalize', 'source.sync']);
+  // match.score é do agente 03 (T-305) e também é registrado em buildRegistry.
+  assert.deepEqual(reg.names().sort(), ['match.score', 'source.normalize', 'source.sync']);
   await reg.run('source.sync', { sourceKey: KEY, mode: 'incremental' }, { jobId: 'x', retryCount: 0, signal: new AbortController().signal });
   await assert.rejects(() => reg.run('source.normalize', { sourceRecordId: 'nao-uuid' }, { jobId: 'x', retryCount: 0, signal: new AbortController().signal }));
 });
