@@ -2,6 +2,8 @@
   "realm": "nett",
   "enabled": true,
   "displayName": "NETT Licita Intelligence (local)",
+  "displayNameHtml": "<div class=\"kc-logo-text\"><span>NETT Licita Intelligence</span></div>",
+  "loginTheme": "nett",
   "sslRequired": "external",
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,

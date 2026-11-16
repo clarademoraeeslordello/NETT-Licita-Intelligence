@@ -16,6 +16,7 @@ import {
   IconX,
 } from '@/components/icons';
 import { ETAPAS_ATIVAS, situacaoDocumento } from '@/lib/plataforma/workspace';
+import { CartaoSessao } from '@/components/sessao/cartao-sessao';
 import { useWorkspace } from './workspace-provider';
 
 type ItemNav = {
@@ -59,16 +60,15 @@ function ativo(pathname: string, href: string): boolean {
 export function Marca({ compacta = false }: { compacta?: boolean }) {
   return (
     <Link href="/" className="flex items-center gap-2.5">
-      <span className="relative flex size-9 items-center justify-center rounded-xl bg-linear-to-br from-nett-gold-light to-nett-gold-light text-nett-text shadow-soft">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M5 19 12 5l7 14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M8.5 13.5h7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      <span className="relative flex size-9 items-center justify-center rounded-xl border border-nett-gold-dark bg-nett-black text-nett-gold">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 18V6l12 12V6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </span>
       {compacta ? null : (
         <span className="leading-tight">
-          <span className="block text-[15px] font-semibold tracking-tight text-nett-text">LicitaFlow</span>
-          <span className="block text-[11px] text-nett-text-muted">Inteligência em licitações</span>
+          <span className="block text-[15px] font-semibold tracking-[0.08em] text-nett-gold">NETT</span>
+          <span className="block text-[11px] uppercase tracking-[0.16em] text-nett-text-muted">Licita Intelligence</span>
         </span>
       )}
     </Link>
@@ -128,26 +128,6 @@ function Navegacao({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-function CartaoEmpresa() {
-  const { ws, pronto } = useWorkspace();
-  return (
-    <div className="rounded-2xl border border-nett-text/10 bg-nett-text/5 p-3">
-      <div className="flex items-center gap-3">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-nett-gold/20 text-sm font-semibold text-nett-gold-light">
-          {pronto ? ws.perfil.empresa.slice(0, 1).toUpperCase() : '·'}
-        </span>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-nett-text">{pronto ? ws.perfil.empresa : 'Carregando…'}</p>
-          <p className="text-xs text-nett-text-muted">{pronto ? `Porte ${ws.perfil.porte} · ${ws.perfil.ufs.length || 'todas as'} UF` : ' '}</p>
-        </div>
-      </div>
-      <p className="mt-3 text-[11px] leading-relaxed text-nett-text-muted">
-        Modo demonstração: seus dados ficam salvos só neste navegador.
-      </p>
-    </div>
-  );
-}
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [menuAberto, setMenuAberto] = useState(false);
   const pathname = usePathname();
@@ -179,7 +159,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <Navegacao />
         </div>
-        <CartaoEmpresa />
+        <CartaoSessao />
       </aside>
 
       {/* Barra superior — mobile */}
@@ -215,7 +195,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Navegacao onNavigate={() => setMenuAberto(false)} />
             </div>
             <div className="pt-6">
-              <CartaoEmpresa />
+              <CartaoSessao />
             </div>
           </div>
         </div>
