@@ -78,6 +78,19 @@ Quem pode propor: qualquer agente (via PR neste arquivo). Quem aceita: agente 01
 - **Decisão:** `HttpError(code, status, message, details?)` em `src/server/http/errors.ts`, com atalhos `badRequest`, `notFound`, `conflict` e `unprocessable`, também exportados de `@/server/auth`. `AuthError` passa a ser um `HttpError`. `withApi` converte qualquer `HttpError` em `apiError` com o status indicado; erro desconhecido continua 500 sem detalhe.
 - **Regras:** `details` só com dado seguro para o cliente. Recurso de outra empresa responde 404, não 403 (não revela existência). Rotas não criam wrapper de erro próprio.
 
+### ADR-023 — Partição de propostas abertas do PNCP · `aceita` (agente 01, 2026-11-16, pedido do agente 02)
+- **Problema:** o feed `/consulta/v1/contratacoes/atualizacao` traz compras ATUALIZADAS no dia, quase todas antigas e já homologadas (46 de 50 nos dados reais). O radar fica vazio.
+- **Decisão:** segunda partição `proposals` no `PncpConnector`, sobre `/consulta/v1/contratacoes/proposta?dataFinal=` (T-213). Mantém o princípio "nada é descartado": grava o SourceRecord de TODO registro da listagem de propostas abertas, não só dos que casam com perfil. Assim um perfil novo casa na hora e a escrita em regime é pequena (listagem inalterada não grava versão). Ordem de grandeza: ~17 mil registros × ~3 KB ≈ 50 MB na 1ª varredura (modalidade 6). O enriquecimento (itens e documentos) continua só para quem casa com perfil, com orçamento por execução.
+- **Limites do PNCP (obrigatórios, não sugestões):** ≥ 1 s entre requisições (`PNCP_MIN_INTERVAL_MS`), nunca retentar 429 (parar e retomar), cursor retomável, orçamento de páginas por execução, cadência de 6 h por modalidade (`SOURCE_PROPOSALS_CRON`), modalidades em sequência. Evasão de limite de terceiros é vedada pela política Nett.
+- **Efeito em cadeia:** cada Opportunity nova dispara `match.score`; o handler (agente 03) descarta rápido o que nenhum SearchProfile ativo pode casar.
+- **Retenção:** política de arquivamento de SourceRecords antigos fica para ADR futura quando o volume pedir.
+
+### ADR-024 — Busca textual indexada de oportunidades · `aceita` (agente 01, 2026-11-16, pedido do agente 02)
+- **Problema:** `q` usa `ILIKE '%…%'` em `title`, `object_description` e `agency_name`: varredura completa com volume real.
+- **Decisão:** tabela NÃO canônica `opportunity_search` (`opportunity_id` PK com `ON DELETE CASCADE`, `search_text`, `updated_at`) com índice GIN trigram (`pg_trgm`, extensão confiável; o papel migrator a cria). O `normalize` grava a linha na mesma transação. O texto é normalizado no app (minúsculas, sem acento) e o `q` é normalizado igual antes do `ILIKE` com `escapeLike`.
+- **Por que não coluna em `opportunities`:** o teste de alinhamento exige colunas = campos do contrato (derivados não entram no contrato). Por que não `unaccent` no SQL: a função não é imutável, então não serve em índice de expressão sem wrapper.
+- **Entrega (T-215):** migration gerada por drizzle-kit na PR do agente 02, revisada por mim; backfill das oportunidades já gravadas; teste com `EXPLAIN` mostrando uso do índice.
+
 ### ADR-006 — Filas com pg-boss sobre o Postgres · `aceita`
 - **Decisão:** pg-boss no schema `pgboss` do mesmo banco. Contrato em `src/contracts/jobs.ts`.
 - **Alternativas:** Redis + BullMQ (mais um serviço); SQS (fora do Railway).
