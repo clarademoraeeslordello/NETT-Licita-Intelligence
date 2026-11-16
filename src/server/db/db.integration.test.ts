@@ -82,7 +82,7 @@ test('pipeline: proposta exige decisão humana da MESMA empresa', async () => {
 });
 
 test('match_scores: perfil de outra empresa é rejeitado', async () => {
-  const [pB] = await db.insert(s.searchProfiles).values({ companyId: companyB, name: 'B', includeTerms: ['notebook'], ownerUserId: user }).returning();
+  const [pB] = await db.insert(s.searchProfiles).values({ companyId: companyB, name: 'B', includeTerms: ['notebook'], ownerUserId: user, active: false }).returning();
   await rejectsWith(() => db.insert(s.matchScores).values({ opportunityId: opp, companyId: companyA, searchProfileId: pB.id, score: 80, factors: [], algorithmVersion: 'v1', opportunityContentHash: hash }), /match_scores_profile_fk/);
   await rejectsWith(() => db.insert(s.searchProfiles).values({ companyId: companyA, name: 'x', includeTerms: [], ownerUserId: user }), /search_profiles_terms/);
 });
