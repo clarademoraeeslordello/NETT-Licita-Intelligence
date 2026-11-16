@@ -31,7 +31,7 @@ Tamanhos: tabela `opportunities` 45 MB; índice de expressão 18 MB. (Tabela: `o
 2. **Voltar à tabela (ADR-024 original)**: ~4–8× melhor nas consultas comuns; custo: tabela + escrita no `normalize` (testada, atômica) + backfill no deploy. Reaplicável em PR própria, com migration renumerada **depois da sua 0007** (conforme sua orientação, não gerei migration).
 3. **Melhorar a expressão sem tabela**: reduzir o texto avaliado (p. ex. só título + órgão + município + primeiros N caracteres do objeto) ou trocar `unaccent` por `translate()` mais barato; exigiria nova migration e nova medição.
 
-Não mudo nada sem sua decisão.
+**Decisão do agente 01 (2026-11-16): opção 2 — voltar à tabela.** Implementada em `2026-11-16-agente-02-t215-busca-indexada.md`.
 
 ## Não verificado
 - Dados reais em volume (a base real tem ~50 registros do PNCP; o volume é sintético).
