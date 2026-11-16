@@ -4,7 +4,7 @@
  */
 import { z } from 'zod';
 
-export const CONTRACTS_VERSION = '1.2.0' as const;
+export const CONTRACTS_VERSION = '1.3.0' as const;
 
 export const uuid = z.uuid();
 export const isoDateTime = z.iso.datetime({ offset: true });
