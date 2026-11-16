@@ -47,7 +47,7 @@ test('consulta de oportunidades: padrões, listas e limites', () => {
   );
   const padrao = parseQuery(opportunityListQuery, new URLSearchParams(''));
   assert.ok(padrao.ok && padrao.data.limit === 30 && padrao.data.sort === 'published_desc');
-  for (const ruim of ['limit=0', 'limit=101', 'q=a', 'status=tudo', 'minValue=1e3', 'modalities=x', 'sort=preco', 'closesFrom=ontem']) {
+  for (const ruim of ['limit=0', 'limit=101', 'q=a', 'q=ab', 'status=tudo', 'minValue=1e3', 'modalities=x', 'sort=preco', 'closesFrom=ontem']) {
     assert.equal(parseQuery(opportunityListQuery, new URLSearchParams(ruim)).ok, false, ruim);
   }
 });
