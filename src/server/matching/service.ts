@@ -14,6 +14,7 @@ import { bandOf } from '../analysis/fit/commercial';
 import type { NettCategory } from '../analysis/fit/dictionary';
 import type { Db } from '../db';
 import { companies, matchScores, opportunities, opportunityItems, searchProfiles, sources } from '../db/schema';
+import { hardFilter, termsMatch, textTokens } from './eligibility';
 import { algorithmVersionOf, computeMatch } from './score';
 
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
@@ -39,40 +40,90 @@ export function toSearchProfile(row: typeof searchProfiles.$inferSelect): Search
 /** The score depends on "days to close", so a stored score is recomputed after this age even if nothing changed. */
 export const MAX_SCORE_AGE_MS = 24 * 3_600_000;
 
-export type ScoreRun = { opportunityFound: boolean; profiles: number; written: number; skipped: number };
+export type ScoreRun = { opportunityFound: boolean; eligible: number; discarded: number; unmatched: number; written: number; skipped: number; removed: number };
+
+const NOTHING: ScoreRun = { opportunityFound: false, eligible: 0, discarded: 0, unmatched: 0, written: 0, skipped: 0, removed: 0 };
 
 /**
- * Scores `opportunityId` for every active SearchProfile of active companies (or only `companyId`).
- * Idempotent: a profile is skipped when the stored score has the same content hash and algorithm version,
- * the profile did not change since, and it is younger than MAX_SCORE_AGE_MS.
+ * T-305b: a score capped by one of these is irrelevant to the radar (no Nett category characterizes the object,
+ * or an excluded term applies), so it is NOT persisted — otherwise the first sweep would store tens of thousands of
+ * useless rows per profile. An older row that now has the cap is deleted. `cancelled` is still persisted (capped).
+ */
+export const UNPERSISTED_CAPS = ['no_term_match', 'excluded_term'] as const;
+const isUnmatched = (caps: string[]) => caps.some((c) => (UNPERSISTED_CAPS as readonly string[]).includes(c));
+
+/**
+ * Scores `opportunityId` for the SearchProfiles it can match (see eligibility.ts), from active profiles of active
+ * companies (or only `companyId`). Cost ladder, cheapest first, so the common "no profile can match" case ends early:
+ *   1. opportunity by primary key; 2. active profiles (small table); 3. in-memory hard filters;
+ *   4. only if needed: source key, item text (terms test); 5. existing scores by (profile, opportunity) — the unique index;
+ *   6. classification + upsert, only for eligible profiles.
+ * Idempotent: an eligible profile is skipped when the stored score has the same content hash and algorithm version,
+ * the profile did not change since, and it is younger than MAX_SCORE_AGE_MS. A stored score whose profile is no
+ * longer eligible (the opportunity changed) is removed, so the radar never shows a stale match.
  */
 export async function scoreOpportunity(db: Db, p: { opportunityId: string; companyId?: string }, now = new Date()): Promise<ScoreRun> {
   const [oppRow] = await db.select().from(opportunities).where(eq(opportunities.id, p.opportunityId));
-  if (!oppRow) return { opportunityFound: false, profiles: 0, written: 0, skipped: 0 }; // nothing to retry
-  const [src] = await db.select({ key: sources.key }).from(sources).where(eq(sources.id, oppRow.primarySourceId));
+  if (!oppRow) return NOTHING; // nothing to retry
+
+  const profiles = (
+    await db
+      .select({ profile: searchProfiles })
+      .from(searchProfiles)
+      .innerJoin(companies, eq(companies.id, searchProfiles.companyId))
+      .where(and(eq(searchProfiles.active, true), eq(companies.status, 'active'), p.companyId ? eq(searchProfiles.companyId, p.companyId) : undefined))
+  ).map((r) => r.profile);
+  if (profiles.length === 0) return { ...NOTHING, opportunityFound: true };
+
+  let sourceKey: string | null | undefined; // undefined = not loaded yet
+  const loadSourceKey = async () => (sourceKey ??= (await db.select({ key: sources.key }).from(sources).where(eq(sources.id, oppRow.primarySourceId)))[0]?.key ?? null);
+  let items: { number: number; description: string }[] | undefined;
+  const loadItems = async () => (items ??= await db.select({ number: opportunityItems.number, description: opportunityItems.description }).from(opportunityItems).where(eq(opportunityItems.opportunityId, oppRow.id)));
+
+  const view = { uf: oppRow.uf, modalityCode: oppRow.modalityCode, estimatedValue: oppRow.estimatedValue, title: oppRow.title, objectDescription: oppRow.objectDescription };
+  const headTokens = textTokens(oppRow.title, oppRow.objectDescription);
+  const eligible: (typeof profiles)[number][] = [];
+  for (const profile of profiles) {
+    if (profile.sourceKeys.length > 0) await loadSourceKey(); // the only filter that needs a query
+    if (hardFilter(view, sourceKey ?? null, profile) !== null) continue;
+    let ok = termsMatch(headTokens, profile.includeTerms);
+    // Terms may appear only in the items: look there before discarding (one query, only for profiles that passed the rest).
+    if (!ok) ok = termsMatch(textTokens(...(await loadItems()).map((i) => i.description)), profile.includeTerms);
+    if (ok) eligible.push(profile);
+  }
+
+  // Existing rows for these profiles on this opportunity (unique index probe per profile).
+  const existing = await db
+    .select()
+    .from(matchScores)
+    .where(and(eq(matchScores.opportunityId, oppRow.id), inArray(matchScores.searchProfileId, profiles.map((x) => x.id))));
+  const eligibleIds = new Set(eligible.map((x) => x.id));
+  const stale = existing.filter((m) => !eligibleIds.has(m.searchProfileId));
+  if (stale.length > 0) await db.delete(matchScores).where(inArray(matchScores.id, stale.map((m) => m.id)));
+  if (eligible.length === 0) return { ...NOTHING, opportunityFound: true, discarded: profiles.length, removed: stale.length };
+
   const opp = toOpportunity(oppRow);
-  const items = await db.select({ number: opportunityItems.number, description: opportunityItems.description }).from(opportunityItems).where(eq(opportunityItems.opportunityId, opp.id));
-
-  const profileRows = await db
-    .select({ profile: searchProfiles })
-    .from(searchProfiles)
-    .innerJoin(companies, eq(companies.id, searchProfiles.companyId))
-    .where(and(eq(searchProfiles.active, true), eq(companies.status, 'active'), p.companyId ? eq(searchProfiles.companyId, p.companyId) : undefined));
-
   const algorithmVersion = algorithmVersionOf();
-  const existing = new Map((await db.select().from(matchScores).where(eq(matchScores.opportunityId, opp.id))).map((m) => [m.searchProfileId, m]));
+  const prevBy = new Map(existing.map((m) => [m.searchProfileId, m]));
   let written = 0;
   let skipped = 0;
-  let considered = 0;
-  for (const { profile: row } of profileRows) {
-    if (row.sourceKeys.length > 0 && !(src && row.sourceKeys.includes(src.key))) continue; // profile does not follow this source
-    considered += 1;
-    const prev = existing.get(row.id);
+  let unmatched = 0;
+  let removed = stale.length;
+  for (const row of eligible) {
+    const prev = prevBy.get(row.id);
     if (prev && prev.opportunityContentHash === opp.contentHash && prev.algorithmVersion === algorithmVersion && prev.computedAt >= row.updatedAt && now.getTime() - prev.computedAt.getTime() < MAX_SCORE_AGE_MS) {
       skipped += 1;
       continue;
     }
-    const m = computeMatch({ opportunity: opp, items, profile: toSearchProfile(row), now });
+    const m = computeMatch({ opportunity: opp, items: await loadItems(), profile: toSearchProfile(row), now });
+    if (isUnmatched(m.caps)) {
+      unmatched += 1;
+      if (prev) {
+        await db.delete(matchScores).where(eq(matchScores.id, prev.id));
+        removed += 1;
+      }
+      continue;
+    }
     const values = { score: m.score, factors: m.factors, caps: m.caps, algorithmVersion: m.algorithmVersion, opportunityContentHash: opp.contentHash, computedAt: now };
     await db
       .insert(matchScores)
@@ -80,7 +131,7 @@ export async function scoreOpportunity(db: Db, p: { opportunityId: string; compa
       .onConflictDoUpdate({ target: [matchScores.searchProfileId, matchScores.opportunityId], set: values });
     written += 1;
   }
-  return { opportunityFound: true, profiles: considered, written, skipped };
+  return { opportunityFound: true, eligible: eligible.length, discarded: profiles.length - eligible.length, unmatched, written, skipped, removed };
 }
 
 export type MatchSummary = { score: number; band: 'high' | 'medium' | 'low'; primaryCategory: NettCategory | null };

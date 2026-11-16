@@ -17,6 +17,7 @@ import {
   document,
   humanReview,
   jobs,
+  matchScore,
   opportunity,
   searchProfile,
   type JobName,
@@ -131,4 +132,20 @@ test('1.3.0: fila source.enrich — dono 02 e payload só com sourceRecordId', (
   assert.equal(jobs['source.enrich'].payload.safeParse({ sourceRecordId: 'x' }).success, false);
   assert.equal(jobs['source.enrich'].payload.safeParse({ sourceRecordId: id, payload: {} }).success, true, 'campos extras são descartados, não aceitos como dado');
   assert.deepEqual(jobs['source.enrich'].payload.parse({ sourceRecordId: id, payload: { a: 1 } }), { sourceRecordId: id });
+});
+
+test('1.4.0: filas match.refresh e match.profile e MatchScore.primaryCategory', () => {
+  assert.equal(jobs['match.refresh'].owner, '03');
+  assert.equal(jobs['match.refresh'].payload.safeParse({}).success, true);
+  assert.equal(jobs['match.profile'].owner, '03');
+  assert.equal(jobs['match.profile'].payload.safeParse({ searchProfileId: id }).success, true);
+  assert.equal(jobs['match.profile'].payload.safeParse({}).success, false);
+  const base = {
+    id, opportunityId: id, companyId: id, searchProfileId: id, score: 80, factors: [], caps: [], algorithmVersion: 'v1',
+    opportunityContentHash: hash, computedAt: now,
+  };
+  assert.equal(matchScore.safeParse({ ...base, primaryCategory: 'lgpd' }).success, true);
+  assert.equal(matchScore.safeParse({ ...base, primaryCategory: null }).success, true);
+  assert.equal(matchScore.safeParse({ ...base, primaryCategory: 'inexistente' }).success, false);
+  assert.equal(matchScore.safeParse(base).success, false, 'campo obrigatório (pode ser null)');
 });

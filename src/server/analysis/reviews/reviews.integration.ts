@@ -27,6 +27,7 @@ const RESULT = { datas: { fim: '30/11/2026' }, itens: [{ nome: 'a' }] };
 
 let A: string, B: string, userA: string, userB: string, opp: string;
 let privA: string, privB: string, pub: string, failed: string, superseded: string, score: string;
+let profileId: string; // removed in `after`: an active profile left behind would affect other suites sharing the database
 
 const input = (over: Record<string, unknown>): ReviewInput => reviewInput.parse({ decision: 'approved', ...over });
 const rejects = (p: Promise<unknown>, code: string, status: number) =>
@@ -66,12 +67,16 @@ before(async () => {
   failed = await analysis({ companyId: A, status: 'failed', result: null });
   superseded = await analysis({ companyId: A, reviewStatus: 'superseded' });
   const [prof] = await db.insert(s.searchProfiles).values({ companyId: A, name: 'p', includeTerms: ['x'], ownerUserId: userA }).returning({ id: s.searchProfiles.id });
+  profileId = prof!.id;
   [{ id: score }] = (await db
     .insert(s.matchScores)
     .values({ opportunityId: opp, companyId: A, searchProfileId: prof!.id, score: 80, factors: [], algorithmVersion: 'v1', opportunityContentHash: hash })
     .returning({ id: s.matchScores.id })) as [{ id: string }];
 });
-after(() => pool.end());
+after(async () => {
+  await db.delete(s.searchProfiles).where(eq(s.searchProfiles.id, profileId));
+  await pool.end();
+});
 
 test('aprovar análise da empresa muda o reviewStatus, grava o parecer e a auditoria na mesma transação', async () => {
   const r = await createReview(db, { companyId: A, reviewerUserId: userA, input: input({ subjectType: 'ai_analysis', subjectId: privA }), ctx: { ipHash: null, requestId: 'req-test-0001' } });

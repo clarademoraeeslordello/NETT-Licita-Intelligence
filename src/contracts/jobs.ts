@@ -46,6 +46,23 @@ export const jobs = {
     /** companyId ausente = todos os SearchProfiles ativos. */
     payload: z.object({ opportunityId: uuid, companyId: uuid.optional() }),
   },
+  /**
+   * 1.4.0 (ADR-025): reavaliação diária das oportunidades abertas, porque o prazo entra na nota.
+   * Agendado às 05:10 America/Sao_Paulo. O handler enfileira `match.score` para oportunidades abertas com
+   * `proposalsCloseAt` entre agora − 1 dia e agora + 8 dias (onde a faixa do prazo muda).
+   */
+  'match.refresh': {
+    owner: '03',
+    payload: z.object({}),
+  },
+  /**
+   * 1.4.0 (ADR-025): perfil criado ou alterado. O handler percorre as oportunidades abertas em lotes (500)
+   * e enfileira `match.score { opportunityId, companyId }`. Quem enfileira: a API de SearchProfile.
+   */
+  'match.profile': {
+    owner: '03',
+    payload: z.object({ searchProfileId: uuid }),
+  },
   'metrics.compute': {
     owner: '04',
     payload: z.object({ granularity: metricGranularity, periodStart: isoDate }),
@@ -69,7 +86,9 @@ export const JOB_DEFAULTS = {
  *  source.enrich      → source.normalize (nova versão enriquecida)
  *  source.normalize   → document.fetch (anexos novos) + match.score (se contentHash mudou)
  *  document.fetch     → document.extract
- *  document.extract   → (nada; análise é sob demanda ou por regra de perfil)
+ *  document.extract   → match.score (1.4.0: a nota passa a usar o texto público extraído; ver ADR-025)
+ *  match.refresh      → match.score (diário; oportunidades abertas perto do prazo)
+ *  match.profile      → match.score (perfil criado ou alterado)
  *  POST /analyses     → analysis.run
  *  cron diário        → metrics.compute
  */
