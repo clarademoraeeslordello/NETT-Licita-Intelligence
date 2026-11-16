@@ -149,3 +149,10 @@ test('1.4.0: filas match.refresh e match.profile e MatchScore.primaryCategory', 
   assert.equal(matchScore.safeParse({ ...base, primaryCategory: 'inexistente' }).success, false);
   assert.equal(matchScore.safeParse(base).success, false, 'campo obrigatório (pode ser null)');
 });
+
+test('1.5.0: source.sync aceita feed opcional (updates|proposals)', () => {
+  const base = { sourceKey: 'pncp', mode: 'incremental' as const };
+  assert.equal(jobs['source.sync'].payload.safeParse(base).success, true);
+  assert.equal(jobs['source.sync'].payload.safeParse({ ...base, feed: 'proposals' }).success, true);
+  assert.equal(jobs['source.sync'].payload.safeParse({ ...base, feed: 'outro' }).success, false);
+});

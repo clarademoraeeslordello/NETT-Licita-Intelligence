@@ -14,6 +14,8 @@ export const jobs = {
       sourceKey: z.string(),
       mode: z.enum(['incremental', 'backfill']),
       since: isoDateTime.optional(),
+      /** 1.5.0 (ADR-023): feed da fonte. Ausente = 'updates'. 'proposals' = propostas abertas (cadência própria, cursor próprio). */
+      feed: z.enum(['updates', 'proposals']).optional(),
     }),
   },
   'source.normalize': {

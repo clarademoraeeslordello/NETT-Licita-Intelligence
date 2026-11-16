@@ -86,6 +86,8 @@ Quem pode propor: qualquer agente (via PR neste arquivo). Quem aceita: agente 01
 - **Efeito em cadeia:** cada Opportunity nova dispara `match.score`; o handler (agente 03) descarta rápido o que nenhum SearchProfile ativo pode casar.
 - **Retenção:** política de arquivamento de SourceRecords antigos fica para ADR futura quando o volume pedir.
 
+**Atualização 2026-11-16 (medição ao vivo do agente 02):** tamanho máximo de página = 50 (51 → HTTP 400); mod. 6 = 17.531 registros/351 páginas, mod. 8 = 3.182/64, mod. 4 = 3.890/78 (493 páginas, ~24,6 mil registros na 1ª varredura). Latência 1,1 s (mod. 6) a 7,2 s (mod. 8/4): varredura de ~8 a ~40 min. A T-213 usa orçamento de tempo por execução (10 min) e reenfileira o mesmo payload com `startAfter` (`singletonKey` evita duplicata), sem alterar `JOB_DEFAULTS`. Contratos 1.5.0: `source.sync.feed` opcional (`updates`|`proposals`), cursor por feed em `Source.lastCursor` (`{v:2, feeds:{…}}`, aceitando o formato atual como `updates`); alternativa rejeitada: 2º Source `pncp_proposals`. 429 nunca é retentado: sync termina `partial` com cooldown e disjuntor.
+
 ### ADR-024 — Busca textual indexada de oportunidades · `aceita`, implementada pela variante do agente 02 (PR #22)
 - **Problema:** `q` usa `ILIKE '%…%'` em `title`, `object_description` e `agency_name`: varredura completa com volume real.
 - **Decisão:** tabela NÃO canônica `opportunity_search` (`opportunity_id` PK com `ON DELETE CASCADE`, `search_text`, `updated_at`) com índice GIN trigram (`pg_trgm`, extensão confiável; o papel migrator a cria). O `normalize` grava a linha na mesma transação. O texto é normalizado no app (minúsculas, sem acento) e o `q` é normalizado igual antes do `ILIKE` com `escapeLike`.
