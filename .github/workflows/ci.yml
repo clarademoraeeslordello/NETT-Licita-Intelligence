@@ -64,6 +64,7 @@ jobs:
       - run: npm run test:analysis
       - run: npm run test:storage
       - run: npm run test:sources
+      - run: npm run test:read
       - run: npm run test:unit
 
   banco:
@@ -104,6 +105,7 @@ jobs:
       - run: npm run test:http:integration
       - run: npm run test:jobs
       - run: npm run test:sources:integration
+      - run: npm run test:read:integration
       - run: npm run test:analysis:integration
       - name: Keycloak local (realm de docker/keycloak)
         run: |

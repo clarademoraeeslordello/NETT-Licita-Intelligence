@@ -28,7 +28,7 @@ Legenda: **W** = único módulo que escreve · **R** = quem lê.
 | `SourceRecord` | `sources.ts` | global, imutável | 02 | 02, 01 |
 | `Opportunity` | `sources.ts` | global | 02 | todos |
 | `OpportunityItem` | `sources.ts` | global | 02 | 03, 04 |
-| `Document` | `documents.ts` | público ou por empresa | 02 (cria/armazena), 03 (`textStatus`, `pageCount`, `textStorageKey`) | todos |
+| `Document` | `documents.ts` | público ou por empresa | 02 (cria/armazena o arquivo: `storageKey`, `sha256`, tamanho, MIME), 03 (`textStatus`, `pageCount`, `textStorageKey`), **04 (somente metadados de certidão: `kind = company_certificate` e bloco `certificate`, via `/companies/{cid}/certificates`; nunca grava campos do arquivo; MIME provisório `application/octet-stream`)** | todos |
 | `AIAnalysis` | `analysis.ts` | público (`companyId` null) ou por empresa | 03 | 04, 01 |
 | `HumanReview` | `analysis.ts` | por empresa, append-only | 03 (API) | todos |
 | `MatchScore` (suporte) | `analysis.ts` | por empresa | 03 | 04 |
@@ -48,6 +48,9 @@ Legenda: **W** = único módulo que escreve · **R** = quem lê.
 5. **Cache público seguro.** `AIAnalysis` com `companyId = null` não pode conter dado da empresa no prompt nem no resultado.
 6. **Documento privado nunca em chave `public/`** do storage. URL assinada expira em ≤ 10 min e só é emitida após authz.
 7. **ConsultantMetric é derivada**: recalcular período inteiro é sempre seguro (upsert pela chave única).
+8. **Parecer humano (T-304).** `HumanReview(bid_decision).subjectId` = id da **Opportunity**; vale o parecer mais recente por empresa × oportunidade. Em análise pública (`AIAnalysis.companyId` nulo) o parecer é gravado por empresa e a linha compartilhada **não** muda de `reviewStatus`; o status por empresa vem de `effectiveReviewStatus()`. Correções só em `ai_analysis`, com `previous` igual ao valor atual (422). A regra que libera `proposal` ou além tem UMA implementação: `assertBidDecisionAuthorizes` (`src/server/analysis/reviews/service.ts`); o pipeline a chama.
+9. **Situação da oportunidade (ADR-018).** `Opportunity.status` guarda só o que a fonte informa; exibição e filtro usam `effectiveStatus(opportunity, now)` (e a condição SQL equivalente), nunca o campo cru.
+10. **Erros HTTP (ADR-022).** Rotas lançam `HttpError`; recurso de outra empresa responde 404.
 
 ### Mapeamento LicitaFlow → contrato
 
