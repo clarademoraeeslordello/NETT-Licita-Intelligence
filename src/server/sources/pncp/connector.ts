@@ -14,7 +14,7 @@ import { z } from 'zod';
 import { AppError } from '@/lib/errors';
 import { pncpGet } from '@/lib/pncp/client';
 import { abrirDisjuntorConsulta, consultaBloqueada } from '@/lib/pncp/disjuntor';
-import type { FetchPageResult, NormalizeResult, SourceConnector } from '../connector';
+import type { FetchPageResult, NormalizeResult, SyncableConnector } from '../connector';
 import { normalizePncp, partesControle, type PncpPayload } from './normalize';
 
 export const PNCP_SOURCE_KEY = 'pncp';
@@ -51,8 +51,18 @@ export type PncpConnectorOptions = {
   now?: () => Date;
 };
 
-export class PncpConnector implements SourceConnector {
+export class PncpConnector implements SyncableConnector {
   readonly key = PNCP_SOURCE_KEY;
+  get definition() {
+    return {
+      name: 'Portal Nacional de Contratações Públicas (PNCP)',
+      kind: 'api' as const,
+      baseUrl: 'https://pncp.gov.br/api',
+      // Limites próprios, conservadores (a API pública não publica cota oficial).
+      rateLimit: { requestsPerMinute: 60, maxConcurrency: 2 },
+      config: { modalities: this.modalities, pageSize: PAGE_SIZE },
+    };
+  }
   private readonly modalities: number[];
   private readonly now: () => Date;
 
@@ -71,6 +81,32 @@ export class PncpConnector implements SourceConnector {
       modalityIndex: 0,
       page: 1,
     };
+  }
+
+  cursorFrom(since: Date | null): PncpCursor {
+    const c = this.initialCursor();
+    return since ? { ...c, day: diaBrasilia(since) } : c;
+  }
+
+  /** Cursor salvo: estende `until` até hoje e respeita mudança de modalidades na configuração. */
+  resumeCursor(saved: unknown): PncpCursor | null {
+    const parsed = pncpCursor.safeParse(saved);
+    if (!parsed.success) return null;
+    const c = parsed.data;
+    const hoje = diaBrasilia(this.now());
+    if (JSON.stringify(c.modalities) !== JSON.stringify(this.modalities)) {
+      return { ...c, modalities: this.modalities, modalityIndex: 0, page: 1, until: hoje };
+    }
+    return { ...c, until: c.until < hoje ? hoje : c.until };
+  }
+
+  listingOf(payload: unknown): unknown {
+    return (payload as Partial<PncpPayload> | null)?.compra ?? null;
+  }
+
+  isEnriched(payload: unknown): boolean {
+    const p = payload as Partial<PncpPayload> | null;
+    return Array.isArray(p?.itens) && Array.isArray(p?.arquivos);
   }
 
   private async consulta<T>(path: string): Promise<T> {
