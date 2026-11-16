@@ -13,7 +13,7 @@
     "test:e2e": "node scripts/test-e2e.mjs",
     "test:css": "node scripts/audit-css.mjs",
     "verify": "node scripts/verify-pipeline.mjs",
-    "test": "npm run typecheck && npm run test:unit && npm run test:contracts && npm run test:auth && npm run test:http && npm run test:analysis && npm run test:ui && npm run test:routes && npm run test:css",
+    "test": "npm run typecheck && npm run test:unit && npm run test:contracts && npm run test:auth && npm run test:http && npm run test:analysis && npm run test:read && npm run test:ui && npm run test:routes && npm run test:css",
     "test:contracts": "tsx --test src/contracts/contracts.test.ts src/server/db/schema.test.ts",
     "test:db": "tsx --test src/server/db/db.integration.test.ts",
     "db:generate": "drizzle-kit generate",
@@ -36,7 +36,9 @@
     "test:sources:integration": "tsx --test src/server/sources/sources.integration.test.ts",
     "test:analysis": "tsx --test \"src/server/analysis/**/*.test.ts\" \"src/server/matching/**/*.test.ts\"",
     "test:analysis:integration": "tsx --test src/server/analysis/reviews/reviews.integration.ts src/server/matching/matching.integration.ts",
-    "test:ui": "tsx --test \"src/components/**/*.test.ts\""
+    "test:ui": "tsx --test \"src/components/**/*.test.ts\"",
+    "test:read": "tsx --test src/server/sources/read/read.test.ts",
+    "test:read:integration": "tsx --test src/server/sources/read/read.integration.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1169.0",

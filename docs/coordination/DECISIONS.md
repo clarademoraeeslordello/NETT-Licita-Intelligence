@@ -62,6 +62,22 @@ Quem pode propor: qualquer agente (via PR neste arquivo). Quem aceita: agente 01
 - **Compatibilidade:** mudança aditiva. Migration 0005 adiciona `subject` (padrão `company`) e `financial_indicators`, com checks no banco. Código dos agentes 02 e 03 reexporta dos contratos; único ajuste de fixture: `capability()` do agente 03 ganhou os dois campos novos.
 - **`completeCapabilityKinds`** (opção de execução do agente 03) fica fora do banco, como ele propôs.
 
+### ADR-020 — Fusão de oportunidades entre fontes · `proposta` (agente 01, 2026-11-16; aguarda evidência do agente 02)
+- **Princípio:** a invariante 1 continua (uma Opportunity por `canonicalKey`). A fusão entre fontes só ocorre por **identificador determinístico**: o número de controle do PNCP (`numeroControlePNCP`, ou CNPJ + ano + sequencial). Fonte que traz esse identificador grava no mesmo `canonicalKey` `pncp:<cnpj>-<ano>-<seq>` (vários SourceRecords, uma Opportunity). **Sem correspondência aproximada** (título, órgão, data) na v1: erro de fusão mistura análises e decisões de empresas diferentes.
+- **Fonte sem identificador PNCP** (se houver) vira Opportunity própria (`<sourceKey>:<id>`); uma ligação entre duas Opportunities só existirá depois de um contrato próprio e confirmação humana.
+- **Pendente:** o agente 02 informa, por fonte candidata (Compras.gov.br, SIGA/RJ e outras), se o payload traz o identificador PNCP. Com isso fecho esta ADR e libero T-205 a T-210 em ordem.
+- **Integrações com dados de cliente** (ex.: Trello): usam credencial e dado de terceiros, então exigem aprovação da responsável antes de qualquer implementação (política Nett). Não iniciar T-205 a T-210 sem isso.
+
+### ADR-021 — Fila `source.enrich` · `aceita` (agente 01, 2026-11-16, pedido do agente 02)
+- **Problema:** o enriquecimento só era retentado quando o registro era relido (incremental ou backfill de ontem). Um registro que casou com perfil e falhou na fonte (ex.: PNCP 503) podia ficar sem itens e documentos para sempre.
+- **Decisão:** fila `source.enrich` `{ sourceRecordId }` (dono 02, política padrão: 3 tentativas com backoff). Grava uma nova versão enriquecida do SourceRecord (a antiga nunca é alterada) e enfileira `source.normalize`. Idempotente por `singletonKey`. Contratos 1.3.0, aditiva.
+- **Implementação:** do agente 02, em PR própria. Após retentativas esgotadas, registrar `AuditEvent` e manter a oportunidade só com a listagem (visível, marcada sem itens).
+- **Deploy:** `npm run jobs:setup` é idempotente e cria a fila nova.
+
+### ADR-022 — HttpError comum nas rotas /api/v1 · `aceita` (agente 01, 2026-11-16, pedido dos agentes 03 e 04)
+- **Decisão:** `HttpError(code, status, message, details?)` em `src/server/http/errors.ts`, com atalhos `badRequest`, `notFound`, `conflict` e `unprocessable`, também exportados de `@/server/auth`. `AuthError` passa a ser um `HttpError`. `withApi` converte qualquer `HttpError` em `apiError` com o status indicado; erro desconhecido continua 500 sem detalhe.
+- **Regras:** `details` só com dado seguro para o cliente. Recurso de outra empresa responde 404, não 403 (não revela existência). Rotas não criam wrapper de erro próprio.
+
 ### ADR-006 — Filas com pg-boss sobre o Postgres · `aceita`
 - **Decisão:** pg-boss no schema `pgboss` do mesmo banco. Contrato em `src/contracts/jobs.ts`.
 - **Alternativas:** Redis + BullMQ (mais um serviço); SQS (fora do Railway).
