@@ -24,7 +24,7 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | T-101 | 01 | Drizzle + schema de todas as entidades canônicas + migration inicial + usuários `app`/`migrator` | T-006 | concluída (PR #2) | schema compila contra `src/contracts`; teste de integração cria/lê cada tabela |
 | T-102 | 01 | docker compose local: Keycloak (realm importável), S3 (SeaweedFS), Postgres opcional (profile) | — | concluída (PR #3) | `npm run infra:up` sobe tudo; realm com usuários fictícios |
 | T-103 | 01 | OIDC Keycloak (openid-client, ADR-005a), sessões no Postgres, `requireSession`, `requireCompanyAccess`, `withApi`, provisionamento no 1º login | T-101, T-102 | concluída (PR #4) | testes: sem sessão → 401; outra empresa → 403 |
-| T-104 | 04 | Tema de login Keycloak na paleta Nett | T-102 | em revisão (agente-04/frontend) | screenshot + auditoria de cores |
+| T-104 | 04 | Tema de login Keycloak na paleta Nett | T-102 | concluída (PR #13) | screenshot + auditoria de cores |
 | T-105 | 02 | pg-boss: `worker/index.ts`, registro de handlers, `enqueue` tipado | T-101 | concluída (PR #8) | teste: job enfileirado é processado e idempotente |
 | T-106 | 02 | `ObjectStorage` S3 + URL assinada | T-102 | concluída (PR #8) | teste de integração com o S3 local (SeaweedFS) |
 | T-107 | 01 | Headers de segurança (CSP com nonce, HSTS), rate limit no Postgres (sessão/IP) | T-103 | concluída (PR #7) | teste de headers |
