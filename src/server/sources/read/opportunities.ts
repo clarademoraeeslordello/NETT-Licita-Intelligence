@@ -9,9 +9,8 @@
 import { and, asc, desc, eq, gte, inArray, lte, sql, type SQL } from 'drizzle-orm';
 import type { OpportunityListQuery, OpportunityView } from '@/contracts/api';
 import type { Db } from '../../db';
-import { documents, opportunities, opportunityItems, opportunitySearch, sources } from '../../db/schema';
+import { documents, opportunities, opportunityItems, sources } from '../../db/schema';
 import { decodeCursor, encodeCursor, InvalidCursor } from './cursor';
-import { searchTokens } from './search-index';
 import { effectiveStatus, effectiveStatusCondition } from './status';
 
 export const EPOCH_ISO = '1970-01-01T00:00:00.000Z';
@@ -24,15 +23,20 @@ const dateOrNull = (v: string | undefined, edge: 'start' | 'end') =>
 export const escapeLike = (v: string) => v.replace(/[\\%_]/g, (c) => `\\${c}`);
 
 /**
- * Busca textual indexada (T-215, ADR-024): `opportunity_search.search_text` (minúsculas, sem acento, trigramas GIN).
- * TODAS as palavras da consulta (até 8) precisam aparecer, em qualquer ordem. A consulta passa pela mesma
- * normalização da escrita (search-index.ts).
+ * Busca textual indexada (migration 0006): insensível a caixa e acento, por trigramas (GIN), sobre
+ * título + objeto + órgão + município. TODAS as palavras da consulta (até 8) precisam aparecer, em qualquer
+ * ordem. A expressão de cada condição é IDÊNTICA à do índice — qualquer mudança aqui exige nova migration.
  */
-export const opportunitySearchCondition = (q: string): SQL => {
-  const likes = searchTokens(q).map((t) => sql`${opportunitySearch.searchText} like ${`%${escapeLike(t)}%`}`);
-  if (!likes.length) return sql`false`;
-  return sql`${opportunities.id} in (select ${opportunitySearch.opportunityId} from ${opportunitySearch} where ${sql.join(likes, sql` and `)})`;
-};
+export const searchTokens = (q: string): string[] => q.trim().split(/\s+/).filter(Boolean).slice(0, 8);
+export const searchPattern = (token: string): SQL => sql`'%' || public.search_text(${escapeLike(token)}) || '%'`;
+export const opportunitySearchCondition = (q: string): SQL =>
+  sql.join(
+    searchTokens(q).map(
+      (t) =>
+        sql`public.opportunity_search_text(${opportunities.title}, ${opportunities.objectDescription}, ${opportunities.agencyName}, ${opportunities.municipality}) like ${searchPattern(t)}`,
+    ),
+    sql` and `,
+  );
 
 type Row = typeof opportunities.$inferSelect;
 
@@ -77,7 +81,7 @@ export function toOpportunityView(o: Row, sourceKey: string, now: Date): Opportu
 
 function filters(q: OpportunityListQuery, now: Date): SQL[] {
   const w: SQL[] = [];
-  if (q.q) w.push(opportunitySearchCondition(q.q));
+  if (q.q) w.push(sql`(${opportunitySearchCondition(q.q)})`);
   if (q.ufs) w.push(inArray(opportunities.uf, q.ufs));
   if (q.modalities) w.push(inArray(opportunities.modalityCode, q.modalities));
   if (q.status) w.push(effectiveStatusCondition(q.status, now));

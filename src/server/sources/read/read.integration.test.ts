@@ -13,8 +13,7 @@ import { opportunityListQuery, opportunityPage, opportunityView, pricePage, publ
 import type { Db } from '../../db';
 import * as s from '../../db/schema';
 import { InvalidCursor } from './cursor';
-import { getOpportunity, listItems, listOpportunities, listPublicDocuments, opportunityExists, opportunitySearchCondition } from './opportunities';
-import { backfillSearchIndex, buildSearchText, missingSearchRows } from './search-index';
+import { getOpportunity, listItems, listOpportunities, listPublicDocuments, opportunityExists, opportunitySearchCondition, searchPattern } from './opportunities';
 import { listPrices } from './prices';
 import { listSources } from './sources';
 import { effectiveStatus, effectiveStatusCondition, type EffectiveStatus } from './status';
@@ -68,10 +67,6 @@ before(async () => {
     const [r] = await db.insert(s.opportunities).values(base(n, over)).returning({ id: s.opportunities.id });
     ids[n] = r!.id;
   }
-  // As oportunidades acima entraram direto no banco (sem passar pelo normalize): o backfill (T-215) cria o índice de busca.
-  const bf = await backfillSearchIndex(db);
-  assert.ok(bf.written >= 11);
-  assert.equal(await missingSearchRows(db), 0);
 });
 
 after(async () => {
@@ -159,50 +154,19 @@ test('paginação por cursor: percorre tudo sem repetir nem pular, nas duas orde
   assert.deepEqual(porEncerramento.slice(-3).sort(), semEncerramento.sort(), 'sem encerramento por último');
 });
 
-test('busca textual usa o índice de trigramas de opportunity_search (sem varredura completa)', async () => {
-  const plano = await db.transaction(async (tx) => {
-    // Base de teste é minúscula e sem estatísticas: o planejador preferiria varrer. Desligar varredura sequencial e por
-    // índice comum deixa só o bitmap — prova que o predicado `LIKE '%…%'` PODE usar o GIN de trigramas. O comportamento
-    // com volume real (escolha por custo, sem forçar) está medido em docs/coordination/handoffs/…-t215-busca-indexada.md.
-    await tx.execute(sql`set local enable_seqscan = off`);
-    await tx.execute(sql`set local enable_indexscan = off`);
-    const r = await tx.execute(sql`explain (format text) select id from opportunities where ${opportunitySearchCondition('software gestao')}`);
-    return (r.rows as Array<Record<string, string>>).map((x) => Object.values(x)[0]).join('\n');
-  });
-  assert.match(plano, /Bitmap Index Scan on opportunity_search_trgm_idx/, plano);
-  assert.doesNotMatch(plano, /Seq Scan on opportunity_search/);
-  // /prices: índice de itens da migration 0006 (search_text(description)).
-  const planoItens = await db.transaction(async (tx) => {
-    await tx.execute(sql`set local enable_seqscan = off`);
-    await tx.execute(sql`set local enable_indexscan = off`);
-    const r = await tx.execute(sql`explain (format text) select i.id from opportunity_items i where public.search_text(i.description) like '%' || public.search_text('papel') || '%'`);
-    return (r.rows as Array<Record<string, string>>).map((x) => Object.values(x)[0]).join('\n');
-  });
-  assert.match(planoItens, /Bitmap Index Scan on opportunity_items_search_trgm_idx/, planoItens);
-});
-
-test('migration 0008 removeu o índice de expressão substituído; mantidos search_text() e o índice de itens', async () => {
-  const idx = (await db.execute(sql`select indexname from pg_indexes where indexname in ('opportunities_search_trgm_idx','opportunity_items_search_trgm_idx','opportunity_search_trgm_idx') order by 1`)).rows.map((r) => (r as { indexname: string }).indexname);
-  assert.deepEqual(idx, ['opportunity_items_search_trgm_idx', 'opportunity_search_trgm_idx']);
-  const fn = (await db.execute(sql`select proname from pg_proc where proname in ('search_text','opportunity_search_text') order by 1`)).rows.map((r) => (r as { proname: string }).proname);
-  assert.deepEqual(fn, ['search_text']);
-});
-
-test('backfill é idempotente, retomável e o rebuild recalcula', async () => {
-  assert.deepEqual(await backfillSearchIndex(db), { scanned: 0, written: 0, batches: 0 }, 'nada faltando');
-  const [{ id }] = await db.select({ id: s.opportunities.id }).from(s.opportunities).where(eq(s.opportunities.id, ids.aberta1!));
-  await db.delete(s.opportunitySearch).where(eq(s.opportunitySearch.opportunityId, id));
-  assert.equal(await missingSearchRows(db) >= 1, true);
-  assert.deepEqual((await listOpportunities(db, q('q=gestao'), NOW)).items, [], 'sem a linha, a busca não acha');
-  const r = await backfillSearchIndex(db, { batchSize: 1 });
-  assert.ok(r.written >= 1 && r.batches >= 1);
-  assert.deepEqual((await listOpportunities(db, q('q=gestao'), NOW)).items.map((i) => i.id), [ids.aberta1], 'depois do backfill a busca acha');
-  await db.update(s.opportunitySearch).set({ searchText: 'lixo' }).where(eq(s.opportunitySearch.opportunityId, id));
-  await backfillSearchIndex(db, { mode: 'rebuild', batchSize: 3 });
-  const [linha] = await db.select().from(s.opportunitySearch).where(eq(s.opportunitySearch.opportunityId, id));
-  const [o] = await db.select().from(s.opportunities).where(eq(s.opportunities.id, id));
-  assert.equal(linha!.searchText, buildSearchText(o!), 'rebuild recalcula');
-  assert.equal(await missingSearchRows(db), 0);
+test('busca textual usa os índices de trigramas (sem varredura completa)', async () => {
+  const plano = async (consulta: ReturnType<typeof sql>) =>
+    db.transaction(async (tx) => {
+      await tx.execute(sql`set local enable_seqscan = off`); // base de teste é pequena: força o planejador a escolher entre índices
+      const r = await tx.execute(sql`explain (format text) ${consulta}`);
+      return (r.rows as Array<Record<string, string>>).map((x) => Object.values(x)[0]).join('\n');
+    });
+  const oport = await plano(sql`select id from opportunities where ${opportunitySearchCondition('software')}`);
+  assert.match(oport, /opportunities_search_trgm_idx/, oport);
+  assert.doesNotMatch(oport, /Seq Scan on opportunities/);
+  const itens = await plano(sql`select id from opportunity_items i where public.search_text(i.description) like ${searchPattern('papel')}`);
+  assert.match(itens, /opportunity_items_search_trgm_idx/, itens);
+  assert.doesNotMatch(itens, /Seq Scan on opportunity_items/);
 });
 
 test('cursor inválido ou de outra ordenação lança InvalidCursor', async () => {
