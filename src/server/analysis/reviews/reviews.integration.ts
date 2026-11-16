@@ -73,9 +73,17 @@ before(async () => {
     .values({ opportunityId: opp, companyId: A, searchProfileId: prof!.id, score: 80, factors: [], algorithmVersion: 'v1', opportunityContentHash: hash })
     .returning({ id: s.matchScores.id })) as [{ id: string }];
 });
+/**
+ * Runs even when a test or `before` fails (node:test). Only the active SearchProfile is removed: companies, users and
+ * analyses stay because human_reviews and audit_events are append-only by design (DELETE is revoked), and they
+ * reference those rows. They are inert: nothing active points at them.
+ */
 after(async () => {
-  await db.delete(s.searchProfiles).where(eq(s.searchProfiles.id, profileId));
-  await pool.end();
+  try {
+    if (profileId) await db.delete(s.searchProfiles).where(eq(s.searchProfiles.id, profileId));
+  } finally {
+    await pool.end();
+  }
 });
 
 test('aprovar análise da empresa muda o reviewStatus, grava o parecer e a auditoria na mesma transação', async () => {

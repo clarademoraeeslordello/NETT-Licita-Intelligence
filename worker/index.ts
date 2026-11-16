@@ -1,6 +1,7 @@
 /** Entrada do serviço worker (Railway `worker`). Ver src/server/jobs/runner.ts. */
 import { getDb } from '../src/server/db';
 import { buildRegistry, sourceSchedules } from '../src/server/jobs/handlers';
+import { matchSchedules } from '../src/server/matching';
 import { startWorker } from '../src/server/jobs/runner';
 
 async function main() {
@@ -9,7 +10,7 @@ async function main() {
   const pool = getDb().$client;
   const handle = await startWorker((boss) => buildRegistry({ pool, boss }), {
     concurrency: Number(process.env.WORKER_CONCURRENCY ?? 2),
-    schedules: sourceSchedules(),
+    schedules: [...sourceSchedules(), ...matchSchedules()],
   });
   let stopping = false;
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {

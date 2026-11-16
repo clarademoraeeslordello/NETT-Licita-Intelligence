@@ -12,6 +12,8 @@ import { matchScore } from '../../contracts';
 import type { Db } from '../db';
 import * as s from '../db/schema';
 import { buildRegistry } from '../jobs/handlers';
+import { hardFilter } from './eligibility';
+import { FANOUT_BATCH, fanOutProfile, matchSchedules, refreshOpenOpportunities } from './fanout';
 import { getMatchSummaries, MAX_SCORE_AGE_MS, MAX_SUMMARY_IDS, scoreOpportunity } from './service';
 
 const url = process.env.DATABASE_URL_TEST;
@@ -25,8 +27,13 @@ const day = 86_400_000;
 let A: string, B: string, C: string, user: string, src: string, srcOther: string, opp: string;
 let a1: string, a2: string, a3: string, a4: string, b1: string, c1: string;
 
-const company = async (n: string, digit: number, status: 'active' | 'suspended') =>
-  (await db.insert(s.companies).values({ legalName: `Empresa ${n}`, cnpj: `4${digit}${run}000`.slice(0, 14).padEnd(14, '0'), size: 'EPP', status }).returning({ id: s.companies.id }))[0]!.id;
+let companySeq = 0; // the CNPJ column is unique: a counter, not a hand-picked digit
+const createdCompanies: string[] = [];
+const company = async (n: string, _unused: number, status: 'active' | 'suspended') => {
+  const id = (await db.insert(s.companies).values({ legalName: `Empresa ${n}`, cnpj: `4${String(++companySeq).padStart(2, '0')}${run}00`.slice(0, 14).padEnd(14, '0'), size: 'EPP', status }).returning({ id: s.companies.id }))[0]!.id;
+  createdCompanies.push(id);
+  return id;
+};
 /** Every profile created here is removed in `after`: active profiles left in the shared test database would change
  *  what other suites see (e.g. the source sync enriches whatever matches ANY active profile). Scores cascade. */
 const createdProfiles: string[] = [];
@@ -77,10 +84,23 @@ before(async () => {
   b1 = await profile(B, { ufs: [] });
   c1 = await profile(C);
 });
+/**
+ * Cleanup runs in `after`, which node:test executes even when a test (or `before`) fails. It removes everything this
+ * suite created, in FK order: profiles (their scores cascade), opportunities (items cascade), sources, companies, user.
+ * Rows are matched by this run's id, never by "everything", because other suites share the database.
+ */
 after(async () => {
-  if (createdProfiles.length) await db.delete(s.searchProfiles).where(inArray(s.searchProfiles.id, createdProfiles));
-  await pool.end();
+  try {
+    if (createdProfiles.length) await db.delete(s.searchProfiles).where(inArray(s.searchProfiles.id, createdProfiles));
+    await pool.query("delete from opportunities where canonical_key like $1 or canonical_key like $2", [`pncp:mt${run}-%`, `pncp:bulk${run}-%`]);
+    await pool.query('delete from sources where key = any($1)', [[`mt_${run}`, `mt_other_${run}`, `mt_bulk_${run}`]]);
+    if (createdCompanies.length) await db.delete(s.companies).where(inArray(s.companies.id, createdCompanies));
+    if (user) await db.delete(s.userAccounts).where(eq(s.userAccounts.id, user));
+  } finally {
+    await pool.end();
+  }
 });
+
 
 test('uma nota por SearchProfile ativo de empresa ativa; inativo, outra fonte e empresa suspensa ficam de fora', async () => {
   // Without companyId it scores every active profile in the database (the shared test database may hold others).
@@ -308,4 +328,123 @@ test('T-305b: nota antiga que passou a ter a trava é apagada; sem a trava, cont
   await db.update(s.opportunities).set({ objectDescription: 'Consultoria para adequação à LGPD e mapeamento de dados pessoais', contentHash: '2'.repeat(64) }).where(eq(s.opportunities.id, o!.id));
   assert.equal((await scoreOpportunity(db, { opportunityId: o!.id, companyId: H }, new Date(Date.now() + 2_000))).written, 1);
   assert.equal((await mine()).length, 1);
+});
+
+/* ------------------- contratos 1.4.0: categoria gravada, match.refresh, match.profile ------------------- */
+
+test('primaryCategory é gravada no match.score e o getMatchSummaries lê a gravada (cálculo só para linha antiga)', async () => {
+  const K = await company('K', 9, 'active');
+  const pid = await profile(K, { ufs: [], modalityCodes: [] });
+  const [o] = await db.insert(s.opportunities).values(opportunityRow(5, { objectDescription: 'Consultoria para adequação à LGPD e mapeamento de dados pessoais' })).returning({ id: s.opportunities.id });
+  await scoreOpportunity(db, { opportunityId: o!.id, companyId: K });
+  const row = () => db.select().from(s.matchScores).where(eq(s.matchScores.searchProfileId, pid)).then((r) => r[0]!);
+  assert.equal((await row()).primaryCategory, 'lgpd');
+  assert.equal((await getMatchSummaries(db, K, [o!.id]))[o!.id]!.primaryCategory, 'lgpd');
+
+  // proves it reads the STORED value: a different stored category wins over what the text would give
+  await db.update(s.matchScores).set({ primaryCategory: 'software' }).where(eq(s.matchScores.searchProfileId, pid));
+  assert.equal((await getMatchSummaries(db, K, [o!.id]))[o!.id]!.primaryCategory, 'software');
+
+  // legacy row (written before 1.4.0, no stored category): falls back to the derived one
+  await db.update(s.matchScores).set({ primaryCategory: null }).where(eq(s.matchScores.searchProfileId, pid));
+  assert.equal((await getMatchSummaries(db, K, [o!.id]))[o!.id]!.primaryCategory, 'lgpd');
+});
+
+type Sent = { opportunityId: string; companyId?: string };
+const capture = () => {
+  const sent: Sent[] = [];
+  return { sent, deps: { db, enqueue: async (p: Sent) => void sent.push(p) } };
+};
+
+test('match.refresh: só oportunidades abertas com prazo na janela [-1 dia, +8 dias]', async () => {
+  const L = await company('L', 1, 'active');
+  await profile(L);
+  const mk = async (n: number, over: Partial<typeof s.opportunities.$inferInsert>) => (await db.insert(s.opportunities).values(opportunityRow(100 + n, over)).returning({ id: s.opportunities.id }))[0]!.id;
+  const now = new Date();
+  const inWindow = await mk(1, { proposalsCloseAt: new Date(now.getTime() + 3 * day) });
+  const justPast = await mk(2, { proposalsCloseAt: new Date(now.getTime() - 12 * 3_600_000) });
+  const farAhead = await mk(3, { proposalsCloseAt: new Date(now.getTime() + 30 * day) });
+  const longPast = await mk(4, { proposalsCloseAt: new Date(now.getTime() - 5 * day) });
+  const noDeadline = await mk(5, { proposalsCloseAt: null });
+  const closedInWindow = await mk(6, { status: 'closed', proposalsCloseAt: new Date(now.getTime() + 2 * day) });
+  const cancelledInWindow = await mk(7, { status: 'cancelled', proposalsCloseAt: new Date(now.getTime() + 2 * day) });
+
+  const { sent, deps } = capture();
+  const r = await refreshOpenOpportunities(deps, now);
+  const got = new Set(sent.map((x) => x.opportunityId));
+  assert.ok(r.enqueued >= 2 && r.enqueued === sent.length);
+  for (const id of [inWindow, justPast]) assert.ok(got.has(id), 'na janela');
+  for (const id of [farAhead, longPast, noDeadline, closedInWindow, cancelledInWindow]) assert.ok(!got.has(id), 'fora da janela ou encerrada');
+  assert.ok(sent.every((x) => x.companyId === undefined), 'refresh reavalia para todos os perfis');
+});
+
+test('match.profile: só abertas que o perfil pode casar; o filtro SQL é superconjunto do filtro em memória', async () => {
+  const M = await company('M', 2, 'active');
+  const pid = await profile(M, { ufs: ['RN'], modalityCodes: [6], minValue: '50000', maxValue: '400000', includeTerms: ['lgpd'] });
+  const [pRow] = await db.select().from(s.searchProfiles).where(eq(s.searchProfiles.id, pid));
+  const mk = async (n: number, over: Partial<typeof s.opportunities.$inferInsert>) =>
+    (await db.insert(s.opportunities).values(opportunityRow(200 + n, { uf: 'RN', modalityCode: 6, estimatedValue: '100000', ...over })).returning())[0]!;
+  const seeded = {
+    match: await mk(1, {}),
+    wrongUf: await mk(2, { uf: 'SP' }),
+    wrongModality: await mk(3, { modalityCode: 4 }),
+    tooCheap: await mk(4, { estimatedValue: '1000' }),
+    tooExpensive: await mk(5, { estimatedValue: '900000' }),
+    unknownUf: await mk(6, { uf: null }),
+    unknownValue: await mk(7, { estimatedValue: null, confidentialBudget: true }),
+    unknownModality: await mk(8, { modalityCode: null }),
+    closed: await mk(9, { status: 'closed' }),
+  };
+  const { sent, deps } = capture();
+  const r = await fanOutProfile(deps, pid);
+  const got = new Set(sent.map((x) => x.opportunityId));
+  assert.equal(r.enqueued, sent.length);
+  assert.ok(sent.every((x) => x.companyId === M), 'cada job leva a empresa do perfil');
+  for (const k of ['match', 'unknownUf', 'unknownValue', 'unknownModality'] as const) assert.ok(got.has(seeded[k].id), k);
+  for (const k of ['wrongUf', 'wrongModality', 'tooCheap', 'tooExpensive', 'closed'] as const) assert.ok(!got.has(seeded[k].id), k);
+
+  // SQL must never drop what the in-memory filter keeps (it would lose a match); it may keep more.
+  for (const [k, o] of Object.entries(seeded)) {
+    if (o.status !== 'receiving_proposals') continue;
+    const kept = hardFilter({ uf: o.uf, modalityCode: o.modalityCode, estimatedValue: o.estimatedValue, title: o.title, objectDescription: o.objectDescription }, 'pncp', pRow!) === null;
+    if (kept) assert.ok(got.has(o.id), `SQL descartou o que o filtro em memória mantém: ${k}`);
+  }
+});
+
+test('match.profile: perfil inativo, empresa suspensa ou inexistente não enfileiram nada', async () => {
+  const N = await company('N', 3, 'active');
+  const S = await company('S', 4, 'suspended');
+  const off = await profile(N, { active: false });
+  const susp = await profile(S);
+  for (const id of [off, susp, '00000000-0000-4000-8000-000000000000']) {
+    const { sent, deps } = capture();
+    assert.deepEqual(await fanOutProfile(deps, id), { enqueued: 0 });
+    assert.equal(sent.length, 0);
+  }
+});
+
+test('match.profile: pagina em lotes de 500 sem perder nem repetir (1100 oportunidades de uma fonte exclusiva)', async () => {
+  const [source] = await db.insert(s.sources).values({ key: `mt_bulk_${run}`, name: 'Bulk', kind: 'api', rateLimit: { requestsPerMinute: 30, maxConcurrency: 3 } }).returning({ id: s.sources.id });
+  void source;
+  const total = FANOUT_BATCH * 2 + 100;
+  const ids: string[] = [];
+  for (let i = 0; i < total; i += 550) {
+    const rows = Array.from({ length: Math.min(550, total - i) }, (_, k) => opportunityRow(1000 + i + k, { primarySourceId: source!.id, canonicalKey: `pncp:bulk${run}-${i + k}`, uf: null }));
+    ids.push(...(await db.insert(s.opportunities).values(rows).returning({ id: s.opportunities.id })).map((r) => r.id));
+  }
+  const O = await company('O', 5, 'active');
+  const pid = await profile(O, { ufs: [], modalityCodes: [], sourceKeys: [`mt_bulk_${run}`] });
+  const { sent, deps } = capture();
+  const r = await fanOutProfile(deps, pid);
+  assert.equal(r.enqueued, total);
+  assert.equal(new Set(sent.map((x) => x.opportunityId)).size, total, 'sem repetição');
+  assert.deepEqual(new Set(sent.map((x) => x.opportunityId)), new Set(ids), 'sem perda');
+});
+
+test('registro e agendamento: match.refresh e match.profile registrados; cron 05:10 por padrão e desligável', async () => {
+  const registry = buildRegistry({ pool, boss: {} as PgBoss, connectors: new Map() });
+  assert.ok(registry.names().includes('match.refresh') && registry.names().includes('match.profile'));
+  assert.deepEqual(matchSchedules({}), [{ name: 'match.refresh', cron: '10 5 * * *', data: {} }]);
+  assert.deepEqual(matchSchedules({ MATCH_REFRESH_CRON: '0 6 * * *' })[0]?.cron, '0 6 * * *');
+  assert.deepEqual(matchSchedules({ MATCH_REFRESH_CRON: '' }), []);
 });
