@@ -34,11 +34,17 @@ type PriceRow = Record<string, unknown> & {
 
 const SORT = 'awarded_desc';
 
+// Descrição do item: índice opportunity_items_search_trgm_idx (migration 0006) sobre public.search_text(description).
+// Todas as palavras (até 8); a normalização (caixa/acento) é feita pelo banco nos dois lados.
+const palavras = (q: string) => q.trim().split(/\s+/).filter(Boolean).slice(0, 8);
+const padrao = (token: string): SQL => sql`'%' || public.search_text(${escapeLike(token)}) || '%'`;
+
 export async function listPrices(db: Db, q: PriceQuery): Promise<PricePage> {
-  // Todas as palavras (até 8), sem acento/caixa NÃO normalizados: ILIKE literal. Sem índice próprio ainda — o conjunto
-  // já é restrito a itens com resultado homologado (T-214 popula; indexar lá, quando houver volume).
-  const palavras = q.q.trim().split(/\s+/).filter(Boolean).slice(0, 8);
-  const base: SQL[] = [sql`i.awarded_unit_value is not null`, ...palavras.map((t) => sql`i.description ilike ${`%${escapeLike(t)}%`}`)];
+  // Índice opportunity_items_search_trgm_idx (migration 0006): mesma expressão.
+  const base: SQL[] = [
+    sql`i.awarded_unit_value is not null`,
+    ...palavras(q.q).map((t) => sql`public.search_text(i.description) like ${padrao(t)}`),
+  ];
   if (q.ufs) base.push(sql`o.uf in (${sql.join(q.ufs.map((u) => sql`${u}::uf`), sql`, `)})`);
   const baseWhere = sql.join(base, sql` and `);
 

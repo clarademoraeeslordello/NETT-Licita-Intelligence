@@ -1,4 +1,4 @@
--- T-215 (ADR-024): busca textual indexada. pg_trgm é extensão "trusted" (PostgreSQL ≥ 13): o migrator, dono do banco, a cria.
+-- T-215 (ADR-024): tabela de busca textual das oportunidades. pg_trgm já existe (migration 0006); repetido por autossuficiência.
 CREATE EXTENSION IF NOT EXISTS pg_trgm;--> statement-breakpoint
 CREATE TABLE "opportunity_search" (
 	"opportunity_id" uuid PRIMARY KEY NOT NULL,

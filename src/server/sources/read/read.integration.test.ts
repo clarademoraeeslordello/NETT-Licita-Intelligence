@@ -171,6 +171,21 @@ test('busca textual usa o índice de trigramas de opportunity_search (sem varred
   });
   assert.match(plano, /Bitmap Index Scan on opportunity_search_trgm_idx/, plano);
   assert.doesNotMatch(plano, /Seq Scan on opportunity_search/);
+  // /prices: índice de itens da migration 0006 (search_text(description)).
+  const planoItens = await db.transaction(async (tx) => {
+    await tx.execute(sql`set local enable_seqscan = off`);
+    await tx.execute(sql`set local enable_indexscan = off`);
+    const r = await tx.execute(sql`explain (format text) select i.id from opportunity_items i where public.search_text(i.description) like '%' || public.search_text('papel') || '%'`);
+    return (r.rows as Array<Record<string, string>>).map((x) => Object.values(x)[0]).join('\n');
+  });
+  assert.match(planoItens, /Bitmap Index Scan on opportunity_items_search_trgm_idx/, planoItens);
+});
+
+test('migration 0008 removeu o índice de expressão substituído; mantidos search_text() e o índice de itens', async () => {
+  const idx = (await db.execute(sql`select indexname from pg_indexes where indexname in ('opportunities_search_trgm_idx','opportunity_items_search_trgm_idx','opportunity_search_trgm_idx') order by 1`)).rows.map((r) => (r as { indexname: string }).indexname);
+  assert.deepEqual(idx, ['opportunity_items_search_trgm_idx', 'opportunity_search_trgm_idx']);
+  const fn = (await db.execute(sql`select proname from pg_proc where proname in ('search_text','opportunity_search_text') order by 1`)).rows.map((r) => (r as { proname: string }).proname);
+  assert.deepEqual(fn, ['search_text']);
 });
 
 test('backfill é idempotente, retomável e o rebuild recalcula', async () => {
