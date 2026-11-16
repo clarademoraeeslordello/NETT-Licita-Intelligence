@@ -1,10 +1,10 @@
 /**
- * Request DTO of POST /api/v1/companies/{cid}/reviews (T-304).
+ * DTOs of /api/v1/companies/{cid}/reviews (T-304), CONTRACTS §4. Import from '@/contracts/api/reviews'.
  * The reviewer is ALWAYS the session user and the company comes from the path: neither is accepted in the body.
- * Kept here (not in src/contracts/api) until agent 01 decides where route DTOs live — see handoff.
  */
 import { z } from 'zod';
-import { reviewDecision, reviewSubject, uuid } from '../../../contracts';
+import { reviewDecision, reviewSubject } from '../analysis';
+import { uuid } from '../common';
 
 const MAX_VALUE_JSON = 10_000;
 const boundedJson = (label: string) =>
@@ -36,3 +36,14 @@ export const reviewInput = z
   .refine((r) => r.decision !== 'rejected' || r.comment !== null, { message: 'rejected exige comment', path: ['comment'] });
 
 export type ReviewInput = z.output<typeof reviewInput>;
+
+/** GET /api/v1/companies/{cid}/reviews?subjectType=&subjectId=&limit=&cursor= (newest first, cursor pagination). */
+export const reviewListQuery = z
+  .object({
+    subjectType: reviewSubject,
+    subjectId: uuid,
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+    cursor: z.string().max(200).optional(),
+  })
+  .strict();
+export type ReviewListQuery = z.output<typeof reviewListQuery>;

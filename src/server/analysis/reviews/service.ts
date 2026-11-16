@@ -12,14 +12,14 @@
  *  - Correções (`corrections`) só existem para `ai_analysis`; `previous` precisa ser igual ao valor atual do resultado.
  */
 import { isDeepStrictEqual } from 'node:util';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { humanReview, type HumanReview } from '../../../contracts';
 import { recordAudit } from '../../audit';
 import type { Db } from '../../db';
 import { aiAnalyses, humanReviews, matchScores, opportunities } from '../../db/schema';
-import type { ReviewInput } from './dto';
+import type { ReviewInput, ReviewListQuery } from '@/contracts/api/reviews';
 
-export type ReviewErrorCode = 'SUBJECT_NOT_FOUND' | 'SUBJECT_NOT_REVIEWABLE' | 'INVALID_CORRECTION' | 'CORRECTIONS_NOT_SUPPORTED' | 'BID_DECISION_INVALID';
+export type ReviewErrorCode = 'INVALID_CURSOR' | 'SUBJECT_NOT_FOUND' | 'SUBJECT_NOT_REVIEWABLE' | 'INVALID_CORRECTION' | 'CORRECTIONS_NOT_SUPPORTED' | 'BID_DECISION_INVALID';
 
 export class ReviewError extends Error {
   constructor(
@@ -172,4 +172,44 @@ export async function assertBidDecisionAuthorizes(db: Db | Pick<Db, 'select'>, p
     .orderBy(desc(humanReviews.createdAt), desc(humanReviews.id))
     .limit(1);
   if (latest && latest.id !== r.id && latest.decision === 'rejected') throw new ReviewError('BID_DECISION_INVALID', 409, 'Um parecer mais recente rejeitou a participação.');
+}
+
+const CURSOR_TS = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(\.\d{1,6})?[+-]\d{2}(:\d{2})?$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Opaque keyset cursor over (created_at, id). The timestamp is the database's own text, so microseconds survive. */
+export const encodeCursor = (ts: string, id: string) => Buffer.from(JSON.stringify([ts, id])).toString('base64url');
+
+export function decodeCursor(cursor: string): { ts: string; id: string } {
+  try {
+    const [ts, id] = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as [unknown, unknown];
+    if (typeof ts === 'string' && typeof id === 'string' && CURSOR_TS.test(ts) && UUID.test(id)) return { ts, id };
+  } catch {
+    /* falls through */
+  }
+  throw new ReviewError('INVALID_CURSOR', 422, 'Cursor inválido.');
+}
+
+/** Reviews of one subject made by `companyId`, newest first. Other companies' reviews are never returned. */
+export async function listReviews(db: Db, companyId: string, q: ReviewListQuery): Promise<{ items: HumanReview[]; nextCursor: string | null }> {
+  const after = q.cursor ? decodeCursor(q.cursor) : null;
+  const rows = await db
+    .select({ row: humanReviews, ts: sql<string>`${humanReviews.createdAt}::text` })
+    .from(humanReviews)
+    .where(
+      and(
+        eq(humanReviews.companyId, companyId),
+        eq(humanReviews.subjectType, q.subjectType),
+        eq(humanReviews.subjectId, q.subjectId),
+        after ? sql`(${humanReviews.createdAt}, ${humanReviews.id}) < (${after.ts}::timestamptz, ${after.id}::uuid)` : undefined,
+      ),
+    )
+    .orderBy(desc(humanReviews.createdAt), desc(humanReviews.id))
+    .limit(q.limit + 1);
+  const page = rows.slice(0, q.limit);
+  const last = page.at(-1);
+  return {
+    items: page.map(({ row }) => humanReview.parse({ ...row, createdAt: row.createdAt.toISOString() })),
+    nextCursor: rows.length > q.limit && last ? encodeCursor(last.ts, last.row.id) : null,
+  };
 }

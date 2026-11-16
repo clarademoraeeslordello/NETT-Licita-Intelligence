@@ -10,7 +10,11 @@ import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import type { Db } from '../../db';
 import * as s from '../../db/schema';
-import { reviewInput, type ReviewInput } from './dto';
+import { reviewInput, type ReviewInput } from '@/contracts/api/reviews';
+import { AuthError } from '../../auth/errors';
+import { authorizeCompany } from '../../auth/guard';
+import type { Session } from '../../auth/session';
+import { reviewsHandlers } from './handlers';
 import { assertBidDecisionAuthorizes, createReview, effectiveReviewStatus, ReviewError } from './service';
 
 const url = process.env.DATABASE_URL_TEST;
@@ -158,4 +162,94 @@ test('assertBidDecisionAuthorizes: só parecer aprovado, da empresa e da oportun
   await rejects(p(approved.review.id), 'BID_DECISION_INVALID', 409);
   // O banco também protege o pipeline: stage >= proposal exige o parecer, da mesma empresa.
   await assert.rejects(db.insert(s.opportunityTrackings).values({ companyId: A, opportunityId: opp, stage: 'proposal' }), /bid_decision|check/i);
+});
+
+/* ------------------- rota (handlers exportados) com autorização real ------------------- */
+
+const sessionOf = (userId: string): Session => ({ id: `sess-${userId}`, user: { id: userId, email: 'x@exemplo.test', name: 'X' }, realmRoles: [], expiresAt: new Date(Date.now() + 3_600_000) });
+const handlersFor = (userId: string | null) =>
+  reviewsHandlers({
+    db: () => db,
+    requireSession: async () => {
+      if (!userId) throw new AuthError('UNAUTHENTICATED', 401, 'Sessão ausente ou expirada.');
+      return sessionOf(userId);
+    },
+    authorize: (session, companyId, role) => authorizeCompany(db, session, companyId, role),
+  });
+const ctxOf = (companyId: string) => ({ params: Promise.resolve({ companyId }) });
+const postReq = (body: unknown) => new Request('http://localhost/x', { method: 'POST', body: JSON.stringify(body) });
+const getReq = (qs: Record<string, string>) => new Request(`http://localhost/x?${new URLSearchParams(qs)}`);
+
+let consultantA: string, viewerA: string, consultantB: string;
+
+test('rota: 401 sem sessão, 403 de outra empresa (com auditoria) e de leitor no POST; nada é gravado', async () => {
+  [{ id: consultantA }, { id: viewerA }, { id: consultantB }] = (await db
+    .insert(s.userAccounts)
+    .values([
+      { keycloakSub: `rt-ca-${run}`, email: 'ca@exemplo.test', name: 'Consultor A' },
+      { keycloakSub: `rt-va-${run}`, email: 'va@exemplo.test', name: 'Leitor A' },
+      { keycloakSub: `rt-cb-${run}`, email: 'cb@exemplo.test', name: 'Consultor B' },
+    ])
+    .returning({ id: s.userAccounts.id })) as [{ id: string }, { id: string }, { id: string }];
+  await db.insert(s.memberships).values([
+    { userId: consultantA, companyId: A, role: 'consultant' },
+    { userId: viewerA, companyId: A, role: 'viewer' },
+    { userId: consultantB, companyId: B, role: 'consultant' },
+  ]);
+  const target = await analysis({ companyId: A });
+  const body = { subjectType: 'ai_analysis', subjectId: target, decision: 'approved' };
+  const count = async () => (await db.select({ id: s.humanReviews.id }).from(s.humanReviews).where(eq(s.humanReviews.subjectId, target))).length;
+
+  await assert.rejects(handlersFor(null).POST(postReq(body), ctxOf(A)), (e) => e instanceof AuthError && e.status === 401);
+  await assert.rejects(handlersFor(consultantB).POST(postReq(body), ctxOf(A)), (e) => e instanceof AuthError && e.status === 403);
+  await assert.rejects(handlersFor(viewerA).POST(postReq(body), ctxOf(A)), (e) => e instanceof AuthError && e.status === 403);
+  await assert.rejects(handlersFor(consultantA).POST(postReq(body), ctxOf('lixo')), (e) => e instanceof AuthError && e.status === 403);
+  assert.equal(await count(), 0);
+  const denied = await db.select().from(s.auditEvents).where(and(eq(s.auditEvents.actorUserId, consultantB), eq(s.auditEvents.action, 'authz.denied')));
+  assert.ok(denied.length >= 1);
+
+  // 422 de corpo inválido só depois da autorização, e sem gravar
+  assert.equal((await handlersFor(consultantA).POST(postReq({ ...body, decision: 'rejected' }), ctxOf(A))).status, 422);
+  assert.equal(await count(), 0);
+
+  const ok = await handlersFor(consultantA).POST(postReq(body), ctxOf(A));
+  assert.equal(ok.status, 201);
+  const created = (await ok.json()) as { review: { reviewerUserId: string }; reviewStatus: string };
+  assert.equal(created.review.reviewerUserId, consultantA); // vem da sessão
+  assert.equal(created.reviewStatus, 'approved');
+  assert.equal(await count(), 1);
+});
+
+test('GET: leitor lista, ordem do mais recente, paginação por cursor sem repetir e isolamento entre empresas', async () => {
+  const target = await analysis({ companyId: null, kind: 'tender_summary' });
+  const makeA: string[] = [];
+  for (let i = 0; i < 5; i++) {
+    const r = await createReview(db, { companyId: A, reviewerUserId: consultantA, input: input({ subjectType: 'ai_analysis', subjectId: target, decision: i % 2 ? 'approved' : 'rejected', comment: i % 2 ? null : `motivo ${i}` }) });
+    makeA.push(r.review.id);
+  }
+  await createReview(db, { companyId: B, reviewerUserId: consultantB, input: input({ subjectType: 'ai_analysis', subjectId: target }) });
+
+  const page = async (companyId: string, userId: string, qs: Record<string, string>) => {
+    const res = await handlersFor(userId).GET(getReq({ subjectType: 'ai_analysis', subjectId: target, ...qs }), ctxOf(companyId));
+    assert.equal(res.status, 200);
+    return (await res.json()) as { items: { id: string; companyId: string }[]; nextCursor: string | null };
+  };
+
+  const seen: string[] = [];
+  let cursor: string | undefined;
+  let pages = 0;
+  do {
+    const p = await page(A, viewerA, { limit: '2', ...(cursor ? { cursor } : {}) });
+    assert.ok(p.items.every((i) => i.companyId === A));
+    seen.push(...p.items.map((i) => i.id));
+    cursor = p.nextCursor ?? undefined;
+    pages++;
+  } while (cursor && pages < 10);
+  assert.equal(pages, 3);
+  assert.deepEqual(seen, [...makeA].reverse());
+
+  const b = await page(B, consultantB, {});
+  assert.equal(b.items.length, 1);
+  assert.equal(b.items[0]!.companyId, B);
+  await assert.rejects(handlersFor(consultantB).GET(getReq({ subjectType: 'ai_analysis', subjectId: target }), ctxOf(A)), (e) => e instanceof AuthError && e.status === 403);
 });
