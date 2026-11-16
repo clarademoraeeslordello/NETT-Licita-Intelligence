@@ -34,6 +34,7 @@
     "test:sources": "tsx --test src/server/sources/pncp/pncp.test.ts",
     "test:sources:live": "tsx --test src/server/sources/pncp/pncp.live.test.ts",
     "test:analysis": "tsx --test \"src/server/analysis/**/*.test.ts\"",
+    "test:analysis:integration": "tsx --test src/server/analysis/reviews/reviews.integration.ts",
     "test:ui": "tsx --test \"src/components/**/*.test.ts\""
   },
   "dependencies": {
