@@ -7,6 +7,7 @@ import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import {
   aiAnalysis,
+  parseAnalysisResult,
   company as companySchema,
   companyCapability,
   document as documentSchema,
@@ -220,6 +221,9 @@ export function toAIAnalysis(
 ): AIAnalysis {
   const documentIds = result.documentsAnalyzed.map((d) => d.documentId);
   if (!documentIds.length) throw new InvalidFitInput(['AIAnalysis exige ao menos um documento (documentIds.min(1))']);
+  // Contracts 1.2.0: every write of AIAnalysis.result goes through parseAnalysisResult.
+  const checked = parseAnalysisResult('fit_assessment', result);
+  if (!checked.success) throw new InvalidFitInput(checked.error.issues.map((i) => `result.${i.path.join('.')}: ${i.message}`));
   return aiAnalysis.parse({
     id: meta.id,
     opportunityId: result.opportunityId,
@@ -233,7 +237,7 @@ export function toAIAnalysis(
     promptVersion: result.versions.prompt ?? `rules:${result.versions.engine}`,
     resultSchemaVersion: FIT_RESULT_SCHEMA_VERSION,
     inputHash: result.inputHash,
-    result,
+    result: checked.data,
     confidence: CONFIDENCE[result.confidence.level],
     warnings: [...result.llm.warnings, ...result.securityAlerts.map((a) => `instrução embutida em ${a.documentId} p.${a.page}`)],
     tokensIn: result.llm.used ? result.llm.tokensIn : null,
