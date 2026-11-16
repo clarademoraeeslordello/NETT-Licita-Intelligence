@@ -28,8 +28,12 @@ let A: string, B: string, C: string, user: string, src: string, srcOther: string
 let a1: string, a2: string, a3: string, a4: string, b1: string, c1: string;
 
 let companySeq = 0; // the CNPJ column is unique: a counter, not a hand-picked digit
-const company = async (n: string, _unused: number, status: 'active' | 'suspended') =>
-  (await db.insert(s.companies).values({ legalName: `Empresa ${n}`, cnpj: `4${String(++companySeq).padStart(2, '0')}${run}00`.slice(0, 14).padEnd(14, '0'), size: 'EPP', status }).returning({ id: s.companies.id }))[0]!.id;
+const createdCompanies: string[] = [];
+const company = async (n: string, _unused: number, status: 'active' | 'suspended') => {
+  const id = (await db.insert(s.companies).values({ legalName: `Empresa ${n}`, cnpj: `4${String(++companySeq).padStart(2, '0')}${run}00`.slice(0, 14).padEnd(14, '0'), size: 'EPP', status }).returning({ id: s.companies.id }))[0]!.id;
+  createdCompanies.push(id);
+  return id;
+};
 /** Every profile created here is removed in `after`: active profiles left in the shared test database would change
  *  what other suites see (e.g. the source sync enriches whatever matches ANY active profile). Scores cascade. */
 const createdProfiles: string[] = [];
@@ -80,12 +84,23 @@ before(async () => {
   b1 = await profile(B, { ufs: [] });
   c1 = await profile(C);
 });
-const createdSources: string[] = [];
+/**
+ * Cleanup runs in `after`, which node:test executes even when a test (or `before`) fails. It removes everything this
+ * suite created, in FK order: profiles (their scores cascade), opportunities (items cascade), sources, companies, user.
+ * Rows are matched by this run's id, never by "everything", because other suites share the database.
+ */
 after(async () => {
-  for (const id of createdSources) await db.delete(s.opportunities).where(eq(s.opportunities.primarySourceId, id)); // scores and items cascade
-  if (createdProfiles.length) await db.delete(s.searchProfiles).where(inArray(s.searchProfiles.id, createdProfiles));
-  await pool.end();
+  try {
+    if (createdProfiles.length) await db.delete(s.searchProfiles).where(inArray(s.searchProfiles.id, createdProfiles));
+    await pool.query("delete from opportunities where canonical_key like $1 or canonical_key like $2", [`pncp:mt${run}-%`, `pncp:bulk${run}-%`]);
+    await pool.query('delete from sources where key = any($1)', [[`mt_${run}`, `mt_other_${run}`, `mt_bulk_${run}`]]);
+    if (createdCompanies.length) await db.delete(s.companies).where(inArray(s.companies.id, createdCompanies));
+    if (user) await db.delete(s.userAccounts).where(eq(s.userAccounts.id, user));
+  } finally {
+    await pool.end();
+  }
 });
+
 
 test('uma nota por SearchProfile ativo de empresa ativa; inativo, outra fonte e empresa suspensa ficam de fora', async () => {
   // Without companyId it scores every active profile in the database (the shared test database may hold others).
@@ -410,7 +425,7 @@ test('match.profile: perfil inativo, empresa suspensa ou inexistente não enfile
 
 test('match.profile: pagina em lotes de 500 sem perder nem repetir (1100 oportunidades de uma fonte exclusiva)', async () => {
   const [source] = await db.insert(s.sources).values({ key: `mt_bulk_${run}`, name: 'Bulk', kind: 'api', rateLimit: { requestsPerMinute: 30, maxConcurrency: 3 } }).returning({ id: s.sources.id });
-  createdSources.push(source!.id);
+  void source;
   const total = FANOUT_BATCH * 2 + 100;
   const ids: string[] = [];
   for (let i = 0; i < total; i += 550) {
