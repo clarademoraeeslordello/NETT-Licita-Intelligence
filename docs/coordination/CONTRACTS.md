@@ -1,7 +1,7 @@
 # CONTRACTS.md — contratos entre módulos
 
-- Versão: **1.3.0** · Status: **aprovado** (1.0.0 pela responsável humana em 2026-11-13; 1.1.0 e 1.2.0 são aditivas e decididas pelo agente 01, ADR-017)
-- 1.3.0: fila `source.enrich` (ADR-021). 1.1.0: `AuditEvent`. 1.2.0: `fit_assessment` (`fitAssessmentResult`, `nettCategory`), `CompanyCapability.subject` e `financialIndicators`, `opportunityUpsert`/`opportunityItemUpsert`/`documentRef`, `parseAnalysisResult(kind, valor)`.
+- Versão: **1.4.0** · Status: **aprovado** (1.0.0 pela responsável humana em 2026-11-13; 1.1.0 e 1.2.0 são aditivas e decididas pelo agente 01, ADR-017)
+- 1.4.0: `MatchScore.primaryCategory` persistido e filas `match.refresh` e `match.profile` (ADR-025). 1.3.0: fila `source.enrich` (ADR-021). 1.1.0: `AuditEvent`. 1.2.0: `fit_assessment` (`fitAssessmentResult`, `nettCategory`), `CompanyCapability.subject` e `financialIndicators`, `opportunityUpsert`/`opportunityItemUpsert`/`documentRef`, `parseAnalysisResult(kind, valor)`.
 - Fonte da verdade executável: `src/contracts/*.ts` (Zod). Este documento explica; o código manda. Divergência entre os dois = bug do agente 01.
 - Alteração: PR do agente 01 (ou proposta de outro agente via handoff) + atualização de `CONTRACTS_VERSION` + entrada em `DECISIONS.md` se quebrar compatibilidade.
 
@@ -76,7 +76,9 @@ Legenda: **W** = único módulo que escreve · **R** = quem lê.
 | `document.fetch` | 02 | `{ documentId }` | `source.normalize`, upload |
 | `document.extract` | 03 | `{ documentId }` | `document.fetch` |
 | `analysis.run` | 03 | `{ analysisId }` | `POST …/analyses` |
-| `match.score` | 03 | `{ opportunityId, companyId? }` | `source.normalize`, alteração de perfil |
+| `match.score` | 03 | `{ opportunityId, companyId? }` | `source.normalize`, `document.extract`, `match.refresh`, `match.profile` |
+| `match.refresh` (1.4.0) | 03 | `{}` | agendamento diário 05:10 America/Sao_Paulo |
+| `match.profile` (1.4.0) | 03 | `{ searchProfileId }` | API de SearchProfile (criar ou alterar) |
 | `metrics.compute` | 04 | `{ granularity, periodStart }` | cron diário |
 
 Regras: payload só IDs; handler idempotente; `retryLimit 3` com backoff; `singletonKey` = payload serializado; nenhum handler chama outro diretamente — só enfileira. Nova fila = PR em `jobs.ts` aprovada pelo 01.

@@ -50,6 +50,13 @@
       "when": 1794837358078,
       "tag": "0006_opportunities_search_index",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794853675409,
+      "tag": "0007_match_score_primary_category",
+      "breakpoints": true
     }
   ]
 }
