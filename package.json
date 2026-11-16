@@ -33,6 +33,7 @@
     "test:storage:integration": "tsx --test src/server/storage/storage.integration.test.ts",
     "test:sources": "tsx --test src/server/sources/pncp/pncp.test.ts",
     "test:sources:live": "tsx --test src/server/sources/pncp/pncp.live.test.ts",
+    "test:sources:integration": "tsx --test src/server/sources/sources.integration.test.ts",
     "test:analysis": "tsx --test \"src/server/analysis/**/*.test.ts\"",
     "test:ui": "tsx --test \"src/components/**/*.test.ts\""
   },
