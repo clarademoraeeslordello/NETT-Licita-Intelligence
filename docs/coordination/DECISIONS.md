@@ -62,11 +62,12 @@ Quem pode propor: qualquer agente (via PR neste arquivo). Quem aceita: agente 01
 - **Compatibilidade:** mudança aditiva. Migration 0005 adiciona `subject` (padrão `company`) e `financial_indicators`, com checks no banco. Código dos agentes 02 e 03 reexporta dos contratos; único ajuste de fixture: `capability()` do agente 03 ganhou os dois campos novos.
 - **`completeCapabilityKinds`** (opção de execução do agente 03) fica fora do banco, como ele propôs.
 
-### ADR-020 — Fusão de oportunidades entre fontes · `proposta` (agente 01, 2026-11-16; aguarda evidência do agente 02)
+### ADR-020 — Fusão de oportunidades entre fontes · `aceita` (agente 01, 2026-11-16; evidência do agente 02 recebida)
 - **Princípio:** a invariante 1 continua (uma Opportunity por `canonicalKey`). A fusão entre fontes só ocorre por **identificador determinístico**: o número de controle do PNCP (`numeroControlePNCP`, ou CNPJ + ano + sequencial). Fonte que traz esse identificador grava no mesmo `canonicalKey` `pncp:<cnpj>-<ano>-<seq>` (vários SourceRecords, uma Opportunity). **Sem correspondência aproximada** (título, órgão, data) na v1: erro de fusão mistura análises e decisões de empresas diferentes.
 - **Fonte sem identificador PNCP** (se houver) vira Opportunity própria (`<sourceKey>:<id>`); uma ligação entre duas Opportunities só existirá depois de um contrato próprio e confirmação humana.
-- **Pendente:** o agente 02 informa, por fonte candidata (Compras.gov.br, SIGA/RJ e outras), se o payload traz o identificador PNCP. Com isso fecho esta ADR e libero T-205 a T-210 em ordem.
-- **Integrações com dados de cliente** (ex.: Trello): usam credencial e dado de terceiros, então exigem aprovação da responsável antes de qualquer implementação (política Nett). Não iniciar T-205 a T-210 sem isso.
+- **Evidência (agente 02, handoff 2026-11-16-agente-02-evidencia-fusao-fontes-adr-020.md):** Compras.gov.br traz `numeroControlePNCP` em 942 de 942 registros reais (16/11, 2 modalidades), coerente com CNPJ, ano e sequencial: a fusão é pelo mesmo `canonicalKey` `pncp:<cnpj>-<ano>-<seq>`, sem heurística. SIGA/RJ: desconhecido (sem acesso), **sem código** até haver evidência do identificador. Trello não é fonte de licitação: sem código até a responsável aprovar. Registro sem o identificador PNCP vira Opportunity própria (`<sourceKey>:<id>`).
+- **Efeito:** T-205 (conector Compras.gov.br gravando no mesmo `canonicalKey`) liberada depois da T-213.
+- **Integrações com dados de cliente** (ex.: Trello): usam credencial e dado de terceiros, então exigem aprovação da responsável antes de qualquer implementação (política Nett). Não iniciar integração com dado de cliente sem isso.
 
 ### ADR-021 — Fila `source.enrich` · `aceita` (agente 01, 2026-11-16, pedido do agente 02)
 - **Problema:** o enriquecimento só era retentado quando o registro era relido (incremental ou backfill de ontem). Um registro que casou com perfil e falhou na fonte (ex.: PNCP 503) podia ficar sem itens e documentos para sempre.
@@ -85,11 +86,12 @@ Quem pode propor: qualquer agente (via PR neste arquivo). Quem aceita: agente 01
 - **Efeito em cadeia:** cada Opportunity nova dispara `match.score`; o handler (agente 03) descarta rápido o que nenhum SearchProfile ativo pode casar.
 - **Retenção:** política de arquivamento de SourceRecords antigos fica para ADR futura quando o volume pedir.
 
-### ADR-024 — Busca textual indexada de oportunidades · `aceita` (agente 01, 2026-11-16, pedido do agente 02)
+### ADR-024 — Busca textual indexada de oportunidades · `aceita`, implementada pela variante do agente 02 (PR #22)
 - **Problema:** `q` usa `ILIKE '%…%'` em `title`, `object_description` e `agency_name`: varredura completa com volume real.
 - **Decisão:** tabela NÃO canônica `opportunity_search` (`opportunity_id` PK com `ON DELETE CASCADE`, `search_text`, `updated_at`) com índice GIN trigram (`pg_trgm`, extensão confiável; o papel migrator a cria). O `normalize` grava a linha na mesma transação. O texto é normalizado no app (minúsculas, sem acento) e o `q` é normalizado igual antes do `ILIKE` com `escapeLike`.
 - **Por que não coluna em `opportunities`:** o teste de alinhamento exige colunas = campos do contrato (derivados não entram no contrato). Por que não `unaccent` no SQL: a função não é imutável, então não serve em índice de expressão sem wrapper.
-- **Entrega (T-215):** migration gerada por drizzle-kit na PR do agente 02, revisada por mim; backfill das oportunidades já gravadas; teste com `EXPLAIN` mostrando uso do índice.
+- **Variante implementada (melhor que a proposta):** o agente 02 resolveu o ponto do `unaccent` com funções `IMMUTABLE` (`search_text`, `opportunity_search_text`) com dicionário qualificado e `search_path` fixo, e índices GIN trigram direto em `opportunities` (título, objeto, órgão, município) e `opportunity_items` (descrição), migration `0006`. Sem tabela extra e sem backfill; a consulta usa a mesma expressão do índice. A tabela `opportunity_search` NÃO será criada. Pré-requisito de produção: `pg_trgm` e `unaccent` no Postgres (contrib padrão).
+- **Entrega original (T-215), superada pela variante:** migration gerada por drizzle-kit na PR do agente 02, revisada por mim; backfill das oportunidades já gravadas; teste com `EXPLAIN` mostrando uso do índice.
 
 ### ADR-025 — match.score: categoria persistida, frescor e fan-out de perfil · `aceita` (agente 01, 2026-11-16, pedido do agente 03)
 - **Uma fórmula, entradas em níveis.** A nota de triagem (`MatchScore`, radar) e a avaliação detalhada (`fit_assessment`) usam a MESMA `scoreCommercial`. A triagem parte de título, objeto e itens; na T-302, `document.extract` enfileira `match.score` e o cálculo passa a usar também o texto público extraído (com limite), de modo que as duas convergem quando há documento. `opportunityContentHash` inclui o hash do texto usado, para a idempotência continuar valendo. A UI rotula "nota de triagem" e "avaliação detalhada".

@@ -39,9 +39,10 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | T-202 | `source.sync` + `source.normalize` persistindo SourceRecord → Opportunity/Item/Document | T-101, T-105 | concluída (PR #15) |
 | T-211 | Fila `source.enrich` (ADR-021): retentar enriquecimento de registros que falharam (dono 02) | T-202 | pronta |
 | T-212 | 02 | Anexar o arquivo de um documento privado (certidão) por URL assinada, com authz e auditoria; atualiza só storageKey, sha256, tamanho e MIME | T-106, T-406 (metadados) | bloqueada |
+| T-205 | 02 | Conector Compras.gov.br gravando no mesmo `canonicalKey` do PNCP (ADR-020; 942 de 942 com `numeroControlePNCP`) | T-213 | bloqueada |
 | T-213 | 02 | Partição `proposals` do PNCP (propostas abertas), ADR-023 | T-202 | pronta |
 | T-214 | 02 | Resultados homologados (`/itens/{n}/resultados`) → `OpportunityItem.awarded*`, alimenta `/prices` | T-202 | pronta (prioridade baixa) |
-| T-215 | 02 | Busca textual indexada (`opportunity_search` + pg_trgm), ADR-024 | T-204 | pronta |
+| T-215 | 02 | Busca textual indexada (`opportunity_search` + pg_trgm), ADR-024 | T-204 | concluída (PR #22, variante da ADR-024) |
 | T-203 | `document.fetch` (download com limite de tamanho, MIME, sem SSRF) | T-106, T-202 | pronta |
 | T-204 | Rotas `/api/v1/opportunities*`, `/sources`, `/prices` | T-103, T-202 | concluída (PR #19) |
 
