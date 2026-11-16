@@ -19,6 +19,8 @@ import type { FetchPageResult, SyncableConnector } from './connector';
 import { normalizeSourceRecord } from './normalize-record';
 import fixturesReais from './pncp/__fixtures__/compras-reais.json';
 import { normalizePncp } from './pncp/normalize';
+import { opportunitySearchCondition } from './read/opportunities';
+import { buildSearchText } from './read/search-index';
 import { payloadHash as payloadHashOf, syncSource } from './sync';
 
 const appUrl = process.env.DATABASE_URL_TEST;
@@ -162,6 +164,14 @@ test('normalize: uma Opportunity por canonicalKey, itens e documentos, match.sco
   assert.equal(docs.length, key0.documents.length);
   assert.ok(docs.every((d) => d.companyId === null && d.origin === 'source' && d.storageKey === null && d.textStatus === 'pending'));
 
+  // T-215: o normalize grava o texto de busca (minúsculas, sem acento) na mesma transação.
+  const [busca] = await db().select().from(s.opportunitySearch).where(eq(s.opportunitySearch.opportunityId, opp.id));
+  assert.ok(busca, 'linha em opportunity_search');
+  assert.equal(busca.searchText, buildSearchText({ title: opp.title, objectDescription: opp.objectDescription, agencyName: opp.agencyName, agencyUnit: opp.agencyUnit, municipality: opp.municipality }));
+  assert.ok(busca.searchText.includes('gerenciamento') && busca.searchText.includes('frota'));
+  assert.equal(busca.searchText, busca.searchText.toLowerCase());
+  assert.doesNotMatch(busca.searchText, /[\u0300-\u036f]|[ãçéíóúâêô]/);
+
   const fetchJobs = await boss.findJobs<{ documentId: string }>('document.fetch', { queued: true });
   assert.ok(docs.every((d) => fetchJobs.some((j) => j.data.documentId === d.id)));
   const scoreJobs = await boss.findJobs<{ opportunityId: string }>('match.score', { queued: true });
@@ -249,6 +259,46 @@ test('versão só com listagem preserva meEppBenefit calculado dos itens (e atua
   if (r2.status !== 'normalized') return;
   const [op2] = await db().select().from(s.opportunities).where(eq(s.opportunities.id, r2.opportunityId));
   assert.equal(op2!.meEppBenefit, 'unknown');
+});
+
+test('texto de busca acompanha a oportunidade: atualiza quando o objeto muda e o registro antigo some da busca', async () => {
+  const k = normalizePncp(fx[0]);
+  if ('skip' in k) throw new Error(k.skip);
+  const [opp] = await db().select().from(s.opportunities).where(eq(s.opportunities.canonicalKey, k.opportunity.canonicalKey));
+  const [src] = await db().select().from(s.sources).where(eq(s.sources.key, KEY));
+  const palavraNova = `zzparalelepípedo${run}`;
+  const listagem = { compra: { ...fx[0].compra, objetoCompra: `Fornecimento de ${palavraNova} para vias`, dataEncerramentoProposta: '2027-02-20T09:00:00' } };
+  const [rec] = await db()
+    .insert(s.sourceRecords)
+    .values({ sourceId: src!.id, externalId: fx[0].compra.numeroControlePNCP, payload: listagem, payloadHash: payloadHashOf(listagem) })
+    .returning({ id: s.sourceRecords.id });
+  assert.equal((await normalizeSourceRecord(deps(), rec!.id)).status, 'normalized');
+  const [linha] = await db().select().from(s.opportunitySearch).where(eq(s.opportunitySearch.opportunityId, opp!.id));
+  assert.ok(linha!.searchText.includes(`zzparalelepipedo${run}`), 'texto novo, sem acento');
+  assert.ok(!linha!.searchText.includes('gerenciamento'), 'texto antigo substituído');
+  const achou = await db().select({ id: s.opportunities.id }).from(s.opportunities).where(opportunitySearchCondition(`ZZParalelepípedo${run}`));
+  assert.deepEqual(achou.map((r) => r.id), [opp!.id], 'a busca (com acento e caixa) acha pelo termo novo');
+  assert.deepEqual(await db().select({ id: s.opportunities.id }).from(s.opportunities).where(opportunitySearchCondition('gerenciamento frota')).then((r) => r.filter((x) => x.id === opp!.id)), [], 'termo antigo não acha mais');
+});
+
+test('atomicidade: se o enfileiramento falhar, nem a oportunidade nem o texto de busca ficam gravados', async () => {
+  const seq = base + 888;
+  const compra = { ...fx[1].compra, numeroControlePNCP: `${fx[1].compra.numeroControlePNCP.slice(0, 17)}${String(seq).padStart(6, '0')}/2026`, sequencialCompra: seq, objetoCompra: `Objeto atômico ${run}` };
+  const payload = { compra };
+  const [src] = await db().select().from(s.sources).where(eq(s.sources.key, KEY));
+  const [rec] = await db().insert(s.sourceRecords).values({ sourceId: src!.id, externalId: compra.numeroControlePNCP, payload, payloadHash: payloadHashOf(payload) }).returning({ id: s.sourceRecords.id });
+  const quebrado = { ...boss, send: async () => { throw new Error('falha simulada no pg-boss'); }, findJobs: boss.findJobs.bind(boss) } as unknown as PgBoss;
+  await assert.rejects(normalizeSourceRecord({ ...deps(), boss: quebrado }, rec!.id), /falha simulada/);
+  const [depois] = await db().select().from(s.sourceRecords).where(eq(s.sourceRecords.id, rec!.id));
+  assert.equal(depois!.normalizationStatus, 'pending', 'registro continua pendente (retentável)');
+  const op = await db().select({ id: s.opportunities.id }).from(s.opportunities).where(eq(s.opportunities.canonicalKey, `pncp:${compra.numeroControlePNCP.slice(0, 14)}-2026-${seq}`));
+  assert.equal(op.length, 0, 'sem oportunidade');
+  const orfas = await db().execute(sql`select count(*)::int as n from opportunity_search where search_text like ${`%objeto atomico ${run}%`}`);
+  assert.equal((orfas.rows[0] as { n: number }).n, 0, 'sem texto de busca');
+  // Retentativa com a fila saudável conclui normalmente.
+  assert.equal((await normalizeSourceRecord(deps(), rec!.id)).status, 'normalized');
+  const [ok] = await db().select({ n: sql<number>`count(*)::int` }).from(s.opportunitySearch).where(sql`${s.opportunitySearch.searchText} like ${`%objeto atomico ${run}%`}`);
+  assert.equal(ok!.n, 1);
 });
 
 test('payload inválido → skipped com motivo, sem Opportunity', async () => {

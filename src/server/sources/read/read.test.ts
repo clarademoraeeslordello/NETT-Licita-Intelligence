@@ -6,6 +6,7 @@ import { HttpError } from '../../http/errors';
 import { decodeCursor, encodeCursor, InvalidCursor } from './cursor';
 import { parseQuery, uuidParam } from './http';
 import { escapeLike } from './opportunities';
+import { buildSearchText, MAX_SEARCH_TEXT, normalizeSearchText, searchTokens } from './search-index';
 import { effectiveStatus } from './status';
 
 const now = new Date('2026-11-16T15:00:00.000Z');
@@ -79,4 +80,14 @@ test('cursor inválido é HttpError 400', () => {
 
 test('escapeLike neutraliza curingas', () => {
   assert.equal(escapeLike('100%_off\\'), '100\\%\\_off\\\\');
+});
+
+test('texto de busca: minúsculas, sem acento, espaços colapsados; consulta usa a mesma normalização', () => {
+  assert.equal(normalizeSearchText('  AQUISIÇÃO de  Software — GESTÃO\nPública  '), 'aquisicao de software — gestao publica');
+  assert.equal(normalizeSearchText('Ação São João Órgão Çedilha'), 'acao sao joao orgao cedilha');
+  assert.deepEqual(searchTokens('  Gestão   SOFTWARE '), ['gestao', 'software']);
+  assert.equal(searchTokens('a b c d e f g h i j').length, 8, 'até 8 palavras');
+  const t = buildSearchText({ title: 'Edital Nº 5', objectDescription: 'Compra de PAPEL', agencyName: 'Prefeitura de São Paulo', agencyUnit: null, municipality: 'São Paulo' });
+  assert.equal(t, 'edital nº 5 compra de papel prefeitura de sao paulo sao paulo');
+  assert.equal(buildSearchText({ title: 'x', objectDescription: 'a'.repeat(MAX_SEARCH_TEXT * 2), agencyName: 'y' }).length, MAX_SEARCH_TEXT);
 });

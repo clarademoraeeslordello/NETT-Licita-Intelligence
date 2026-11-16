@@ -10,7 +10,7 @@ import { sql, type SQL } from 'drizzle-orm';
 import type { PricePage, PriceQuery } from '@/contracts/api';
 import type { Db } from '../../db';
 import { decodeCursor, encodeCursor } from './cursor';
-import { EPOCH_ISO, searchPattern, searchTokens } from './opportunities';
+import { EPOCH_ISO, escapeLike } from './opportunities';
 
 type PriceRow = Record<string, unknown> & {
   item_id: string;
@@ -35,11 +35,10 @@ type PriceRow = Record<string, unknown> & {
 const SORT = 'awarded_desc';
 
 export async function listPrices(db: Db, q: PriceQuery): Promise<PricePage> {
-  // Índice opportunity_items_search_trgm_idx (migration 0006): mesma expressão.
-  const base: SQL[] = [
-    sql`i.awarded_unit_value is not null`,
-    ...searchTokens(q.q).map((t) => sql`public.search_text(i.description) like ${searchPattern(t)}`),
-  ];
+  // Todas as palavras (até 8), sem acento/caixa NÃO normalizados: ILIKE literal. Sem índice próprio ainda — o conjunto
+  // já é restrito a itens com resultado homologado (T-214 popula; indexar lá, quando houver volume).
+  const palavras = q.q.trim().split(/\s+/).filter(Boolean).slice(0, 8);
+  const base: SQL[] = [sql`i.awarded_unit_value is not null`, ...palavras.map((t) => sql`i.description ilike ${`%${escapeLike(t)}%`}`)];
   if (q.ufs) base.push(sql`o.uf in (${sql.join(q.ufs.map((u) => sql`${u}::uf`), sql`, `)})`);
   const baseWhere = sql.join(base, sql` and `);
 

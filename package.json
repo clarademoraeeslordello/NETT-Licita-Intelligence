@@ -38,7 +38,8 @@
     "test:analysis:integration": "tsx --test src/server/analysis/reviews/reviews.integration.ts",
     "test:ui": "tsx --test \"src/components/**/*.test.ts\"",
     "test:read": "tsx --test src/server/sources/read/read.test.ts",
-    "test:read:integration": "tsx --test src/server/sources/read/read.integration.test.ts"
+    "test:read:integration": "tsx --test src/server/sources/read/read.integration.test.ts",
+    "search:backfill": "tsx src/server/sources/read/backfill-search.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1169.0",

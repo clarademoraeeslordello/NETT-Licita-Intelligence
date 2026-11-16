@@ -192,6 +192,18 @@ export const opportunityItems = pgTable('opportunity_items', {
   awardedAt: tz('awarded_at'),
 }, (t) => [unique('opportunity_items_number_uq').on(t.opportunityId, t.number), check('opportunity_items_number_positive', sql`${t.number} > 0`)]);
 
+/**
+ * Índice de busca textual das oportunidades (T-215, ADR-024). Tabela de SUPORTE, não canônica: o texto é
+ * derivado (minúsculas, sem acento — normalizado no app) e fica fora de `opportunities` para o teste de
+ * alinhamento com o contrato continuar valendo. Escrita: `source.normalize` na mesma transação da oportunidade
+ * (agente 02). Índice GIN de trigramas (`pg_trgm`) para `LIKE '%…%'` sem varredura completa.
+ */
+export const opportunitySearch = pgTable('opportunity_search', {
+  opportunityId: uuid('opportunity_id').primaryKey().references(() => opportunities.id, { onDelete: 'cascade' }),
+  searchText: text('search_text').notNull(),
+  updatedAt: tz('updated_at').notNull().defaultNow(),
+}, (t) => [index('opportunity_search_trgm_idx').using('gin', t.searchText.op('gin_trgm_ops'))]);
+
 /* ------------------------------- documentos ------------------------------ */
 
 export const documents = pgTable('documents', {

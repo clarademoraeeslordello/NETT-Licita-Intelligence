@@ -41,7 +41,7 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | T-212 | 02 | Anexar o arquivo de um documento privado (certidão) por URL assinada, com authz e auditoria; atualiza só storageKey, sha256, tamanho e MIME | T-106, T-406 (metadados) | bloqueada |
 | T-213 | 02 | Partição `proposals` do PNCP (propostas abertas), ADR-023 | T-202 | pronta |
 | T-214 | 02 | Resultados homologados (`/itens/{n}/resultados`) → `OpportunityItem.awarded*`, alimenta `/prices` | T-202 | pronta (prioridade baixa) |
-| T-215 | 02 | Busca textual indexada (`opportunity_search` + pg_trgm), ADR-024 | T-204 | pronta |
+| T-215 | 02 | Busca textual indexada (`opportunity_search` + pg_trgm), ADR-024 | T-204 | em revisão |
 | T-203 | `document.fetch` (download com limite de tamanho, MIME, sem SSRF) | T-106, T-202 | pronta |
 | T-204 | Rotas `/api/v1/opportunities*`, `/sources`, `/prices` | T-103, T-202 | concluída (PR #19) |
 

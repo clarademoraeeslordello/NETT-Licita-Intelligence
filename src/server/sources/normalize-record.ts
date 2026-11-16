@@ -20,6 +20,7 @@ import { enqueueWith } from '../jobs/enqueue';
 import { log } from '../jobs/registry';
 import type { SyncableConnector } from './connector';
 import { contentHashOf } from './pncp/normalize';
+import { buildSearchText, upsertSearchText } from './read/search-index';
 
 const data = (v: string | null) => (v === null ? null : new Date(v));
 
@@ -103,6 +104,8 @@ export async function normalizeSourceRecord(deps: NormalizeDeps, sourceRecordId:
       })
       .returning({ id: s.opportunities.id });
     const opportunityId = salva!.id;
+    // Índice de busca (T-215, ADR-024): mesma transação da oportunidade; só regrava se o texto mudou.
+    await upsertSearchText(db, opportunityId, buildSearchText(o));
     const created = !anterior;
     const contentChanged = created || anterior!.contentHash !== o.contentHash;
 
