@@ -20,6 +20,15 @@ export const jobs = {
     owner: '02',
     payload: z.object({ sourceRecordId: uuid }),
   },
+  /**
+   * 1.3.0 (ADR-021): retentar o enriquecimento (itens e arquivos) de um SourceRecord que casou com um
+   * SearchProfile mas ficou só com a listagem porque a fonte falhou. O handler grava uma NOVA versão
+   * enriquecida do SourceRecord (a antiga nunca é alterada) e enfileira `source.normalize`.
+   */
+  'source.enrich': {
+    owner: '02',
+    payload: z.object({ sourceRecordId: uuid }),
+  },
   'document.fetch': {
     owner: '02',
     payload: z.object({ documentId: uuid }),
@@ -56,6 +65,8 @@ export const JOB_DEFAULTS = {
 /**
  * Encadeamento canônico (quem enfileira o quê):
  *  source.sync        → source.normalize (por registro novo/alterado)
+ *  source.sync        → source.enrich (registro que casou com perfil e cujo enriquecimento falhou)
+ *  source.enrich      → source.normalize (nova versão enriquecida)
  *  source.normalize   → document.fetch (anexos novos) + match.score (se contentHash mudou)
  *  document.fetch     → document.extract
  *  document.extract   → (nada; análise é sob demanda ou por regra de perfil)

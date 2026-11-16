@@ -36,9 +36,10 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | ID | Tarefa | Depende de | Status |
 | --- | --- | --- | --- |
 | T-201 | `SourceConnector` PNCP sobre `src/lib/pncp/client.ts` (mantendo backoff/disjuntor) | T-003 | concluída (PR #8; enriquecimento ao vivo pendente: PNCP /pncp/v1 indisponível no teste) |
-| T-202 | `source.sync` + `source.normalize` persistindo SourceRecord → Opportunity/Item/Document | T-101, T-105 | em revisão |
-| T-203 | `document.fetch` (download com limite de tamanho, MIME, sem SSRF) | T-106, T-202 | bloqueada |
-| T-204 | Rotas `/api/v1/opportunities*`, `/sources`, `/prices` | T-103, T-202 | bloqueada |
+| T-202 | `source.sync` + `source.normalize` persistindo SourceRecord → Opportunity/Item/Document | T-101, T-105 | concluída (PR #15) |
+| T-211 | Fila `source.enrich` (ADR-021): retentar enriquecimento de registros que falharam (dono 02) | T-202 | pronta |
+| T-203 | `document.fetch` (download com limite de tamanho, MIME, sem SSRF) | T-106, T-202 | pronta |
+| T-204 | Rotas `/api/v1/opportunities*`, `/sources`, `/prices` | T-103, T-202 | pronta |
 
 ## Fase 3 — IA e análise (agente 03)
 
