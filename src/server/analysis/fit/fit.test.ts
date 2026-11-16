@@ -170,6 +170,9 @@ describe('avaliação completa', () => {
     assert.equal(row.engine, 'local_rules');
     assert.equal(row.reviewStatus, 'pending_review');
     assert.equal(row.inputHash, r.inputHash);
+    // A result outside the fit_assessment schema is refused before building the row.
+    const broken = { ...r, commercial: { ...r.commercial, score: 101 } } as FitAssessmentResult;
+    assert.throws(() => toAIAnalysis(broken, { id: row.id, requestedByUserId: null, queuedAt: NOW.toISOString(), startedAt: NOW.toISOString(), durationMs: 1 }), InvalidFitInput);
   });
 });
 
