@@ -1,0 +1,276 @@
+/*
+ * T-104 — Tema de login NETT sobre o keycloak.v2 (PatternFly v5).
+ * Somente as 8 cores oficiais (CONTRACTS.md §6), variações apenas por
+ * opacidade. Estados (erro/alerta/sucesso) usam ícone + texto + borda, sem
+ * matiz nova (ADR-009).
+ */
+:root {
+  --nett-black: #050505;
+  --nett-surface: #0D0D0D;
+  --nett-raised: #111111;
+  --nett-gold: #C9A227;
+  --nett-gold-light: #F0D375;
+  --nett-gold-dark: #8A6D1A;
+  --nett-text: #ECECEC;
+  --nett-text-muted: #AFAFAF;
+
+  --keycloak-logo-url: url('../img/nett-logo.svg');
+  --keycloak-bg-logo-url: none;
+  --keycloak-logo-height: 64px;
+  --keycloak-logo-width: 300px;
+  --keycloak-card-top-color: var(--nett-gold);
+
+  /* Superfícies e texto */
+  --pf-v5-global--BackgroundColor--100: var(--nett-surface);
+  --pf-v5-global--BackgroundColor--150: var(--nett-raised);
+  --pf-v5-global--BackgroundColor--200: var(--nett-black);
+  --pf-v5-global--BackgroundColor--light-100: var(--nett-surface);
+  --pf-v5-global--BackgroundColor--light-200: var(--nett-raised);
+  --pf-v5-global--BackgroundColor--light-300: var(--nett-raised);
+  --pf-v5-global--BackgroundColor--dark-100: var(--nett-black);
+  --pf-v5-global--BackgroundColor--dark-200: var(--nett-surface);
+  --pf-v5-global--BackgroundColor--dark-300: var(--nett-raised);
+  --pf-v5-global--BackgroundColor--dark-400: var(--nett-raised);
+  --pf-v5-global--Color--100: var(--nett-text);
+  --pf-v5-global--Color--200: var(--nett-text-muted);
+  --pf-v5-global--Color--300: var(--nett-text-muted);
+  --pf-v5-global--Color--400: var(--nett-text-muted);
+  --pf-v5-global--Color--light-100: var(--nett-text);
+  --pf-v5-global--Color--light-200: var(--nett-text-muted);
+  --pf-v5-global--Color--light-300: var(--nett-text-muted);
+  --pf-v5-global--Color--dark-100: var(--nett-text);
+  --pf-v5-global--Color--dark-200: var(--nett-text-muted);
+  --pf-v5-global--BorderColor--100: color-mix(in oklab, var(--nett-text-muted) 30%, transparent);
+  --pf-v5-global--BorderColor--200: color-mix(in oklab, var(--nett-text-muted) 30%, transparent);
+  --pf-v5-global--BorderColor--300: color-mix(in oklab, var(--nett-text-muted) 15%, transparent);
+  --pf-v5-global--BorderColor--dark-100: var(--nett-gold-dark);
+  --pf-v5-global--BorderColor--light-100: color-mix(in oklab, var(--nett-text-muted) 30%, transparent);
+  --pf-v5-global--disabled-color--100: var(--nett-text-muted);
+  --pf-v5-global--disabled-color--200: var(--nett-raised);
+  --pf-v5-global--disabled-color--300: var(--nett-raised);
+
+  /* Ação, foco e links */
+  --pf-v5-global--primary-color--100: var(--nett-gold);
+  --pf-v5-global--primary-color--200: var(--nett-gold-light);
+  --pf-v5-global--primary-color--light-100: var(--nett-gold-light);
+  --pf-v5-global--primary-color--dark-100: var(--nett-gold);
+  --pf-v5-global--active-color--100: var(--nett-gold);
+  --pf-v5-global--active-color--200: var(--nett-gold-light);
+  --pf-v5-global--active-color--300: var(--nett-gold-light);
+  --pf-v5-global--active-color--400: var(--nett-gold);
+  --pf-v5-global--link--Color: var(--nett-gold-light);
+  --pf-v5-global--link--Color--hover: var(--nett-text);
+  --pf-v5-global--link--Color--light: var(--nett-gold-light);
+  --pf-v5-global--link--Color--light--hover: var(--nett-text);
+  --pf-v5-global--link--Color--dark: var(--nett-gold-light);
+  --pf-v5-global--link--Color--dark--hover: var(--nett-text);
+  --pf-v5-global--link--Color--visited: var(--nett-gold-light);
+
+  /* Estados: sem matiz nova — dourado/neutro + ícone e texto */
+  --pf-v5-global--danger-color--100: var(--nett-text);
+  --pf-v5-global--danger-color--200: var(--nett-text);
+  --pf-v5-global--danger-color--300: var(--nett-text);
+  --pf-v5-global--success-color--100: var(--nett-gold-light);
+  --pf-v5-global--success-color--200: var(--nett-gold-light);
+  --pf-v5-global--warning-color--100: var(--nett-gold-light);
+  --pf-v5-global--warning-color--200: var(--nett-gold-light);
+  --pf-v5-global--info-color--100: var(--nett-gold);
+  --pf-v5-global--info-color--200: var(--nett-gold-light);
+  --pf-v5-global--custom-color--100: var(--nett-gold);
+  --pf-v5-global--custom-color--200: var(--nett-gold-light);
+  --pf-v5-global--palette--black-1000: var(--nett-black);
+  --pf-v5-global--palette--white: var(--nett-text);
+
+  --pf-v5-global--BoxShadow--sm: 0 1px 3px color-mix(in oklab, var(--nett-black) 60%, transparent);
+  --pf-v5-global--BoxShadow--md: 0 8px 24px -12px color-mix(in oklab, var(--nett-black) 80%, transparent);
+  --pf-v5-global--BoxShadow--lg: 0 0 0 1px color-mix(in oklab, var(--nett-gold) 28%, transparent), 0 24px 48px -16px color-mix(in oklab, var(--nett-black) 90%, transparent);
+
+  --pf-v5-global--FontFamily--text: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --pf-v5-global--FontFamily--heading: var(--pf-v5-global--FontFamily--text);
+  color-scheme: dark;
+}
+
+html,
+.login-pf body {
+  background: var(--nett-black);
+  color: var(--nett-text);
+}
+
+::selection {
+  background: var(--nett-gold);
+  color: var(--nett-black);
+}
+
+:focus-visible {
+  outline: 2px solid var(--nett-gold) !important;
+  outline-offset: 2px;
+}
+
+/* Cartão */
+.pf-v5-c-login__main {
+  --pf-v5-c-login__main--BackgroundColor: var(--nett-surface);
+  background-color: var(--nett-surface);
+  border: 1px solid color-mix(in oklab, var(--nett-text-muted) 15%, transparent);
+  border-radius: 16px;
+  box-shadow: var(--pf-v5-global--BoxShadow--lg);
+}
+
+.pf-v5-c-login__main-header {
+  border-top: 3px solid var(--nett-gold);
+  border-radius: 16px 16px 0 0;
+}
+
+.pf-v5-c-title,
+.pf-v5-c-login__main-header .pf-v5-c-title {
+  color: var(--nett-text);
+}
+
+/* Formulário */
+.pf-v5-c-form__label-text,
+.pf-v5-c-check__label {
+  color: var(--nett-text);
+}
+
+.pf-v5-c-form__label-required {
+  color: var(--nett-gold-light);
+}
+
+.pf-v5-c-form-control {
+  --pf-v5-c-form-control--BackgroundColor: var(--nett-raised);
+  --pf-v5-c-form-control--Color: var(--nett-text);
+  --pf-v5-c-form-control--before--BorderTopColor: color-mix(in oklab, var(--nett-text-muted) 30%, transparent);
+  --pf-v5-c-form-control--before--BorderRightColor: color-mix(in oklab, var(--nett-text-muted) 30%, transparent);
+  --pf-v5-c-form-control--before--BorderBottomColor: color-mix(in oklab, var(--nett-text-muted) 30%, transparent);
+  --pf-v5-c-form-control--before--BorderLeftColor: color-mix(in oklab, var(--nett-text-muted) 30%, transparent);
+  --pf-v5-c-form-control--after--BorderBottomColor: var(--nett-gold-dark);
+  --pf-v5-c-form-control--hover--after--BorderBottomColor: var(--nett-gold);
+  --pf-v5-c-form-control--focus--after--BorderBottomColor: var(--nett-gold);
+  --pf-v5-c-form-control--m-error--after--BorderBottomColor: var(--nett-text);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Campo de senha + botão "mostrar": cantos contínuos no grupo */
+.pf-v5-c-input-group .pf-v5-c-form-control {
+  border-radius: 10px 0 0 10px;
+}
+
+.pf-v5-c-input-group .pf-v5-c-button.pf-m-control {
+  border-radius: 0 10px 10px 0;
+}
+
+.pf-v5-c-form-control > input,
+.pf-v5-c-form-control > input::placeholder {
+  color: var(--nett-text);
+}
+
+.pf-v5-c-check__input {
+  accent-color: var(--nett-gold);
+}
+
+/* Botões */
+.pf-v5-c-button.pf-m-primary {
+  --pf-v5-c-button--m-primary--BackgroundColor: var(--nett-gold);
+  --pf-v5-c-button--m-primary--Color: var(--nett-black);
+  --pf-v5-c-button--m-primary--hover--BackgroundColor: var(--nett-gold-light);
+  --pf-v5-c-button--m-primary--hover--Color: var(--nett-black);
+  --pf-v5-c-button--m-primary--focus--BackgroundColor: var(--nett-gold-light);
+  --pf-v5-c-button--m-primary--focus--Color: var(--nett-black);
+  --pf-v5-c-button--m-primary--active--BackgroundColor: var(--nett-gold-light);
+  --pf-v5-c-button--m-primary--active--Color: var(--nett-black);
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.pf-v5-c-button.pf-m-control,
+.pf-v5-c-button.pf-m-secondary,
+.pf-v5-c-button.pf-m-plain {
+  --pf-v5-c-button--m-control--BackgroundColor: var(--nett-raised);
+  --pf-v5-c-button--m-control--Color: var(--nett-text-muted);
+  --pf-v5-c-button--m-control--hover--Color: var(--nett-text);
+  --pf-v5-c-button--m-control--after--BorderColor: color-mix(in oklab, var(--nett-text-muted) 30%, transparent);
+  --pf-v5-c-button--m-secondary--Color: var(--nett-gold-light);
+  --pf-v5-c-button--m-secondary--after--BorderColor: var(--nett-gold);
+  --pf-v5-c-button--m-plain--Color: var(--nett-text-muted);
+  --pf-v5-c-button--m-plain--hover--Color: var(--nett-text);
+}
+
+.pf-v5-c-button.pf-m-link {
+  --pf-v5-c-button--m-link--Color: var(--nett-gold-light);
+  --pf-v5-c-button--m-link--hover--Color: var(--nett-text);
+}
+
+a,
+a:visited {
+  color: var(--nett-gold-light);
+}
+
+a:hover {
+  color: var(--nett-text);
+}
+
+/* Alertas (erro, aviso, sucesso, info): borda e ícone, sem cor nova */
+.pf-v5-c-alert {
+  --pf-v5-c-alert--BackgroundColor: var(--nett-raised);
+  --pf-v5-c-alert--BorderTopColor: var(--nett-gold);
+  --pf-v5-c-alert__icon--Color: var(--nett-gold-light);
+  --pf-v5-c-alert__title--Color: var(--nett-text);
+  --pf-v5-c-alert--m-danger--BorderTopColor: var(--nett-text);
+  --pf-v5-c-alert--m-danger__icon--Color: var(--nett-text);
+  --pf-v5-c-alert--m-danger__title--Color: var(--nett-text);
+  --pf-v5-c-alert--m-warning--BorderTopColor: var(--nett-gold-light);
+  --pf-v5-c-alert--m-warning__icon--Color: var(--nett-gold-light);
+  --pf-v5-c-alert--m-warning__title--Color: var(--nett-text);
+  --pf-v5-c-alert--m-success--BorderTopColor: var(--nett-gold);
+  --pf-v5-c-alert--m-success__icon--Color: var(--nett-gold);
+  --pf-v5-c-alert--m-success__title--Color: var(--nett-text);
+  --pf-v5-c-alert--m-info--BorderTopColor: var(--nett-gold);
+  --pf-v5-c-alert--m-info__icon--Color: var(--nett-gold);
+  --pf-v5-c-alert--m-info__title--Color: var(--nett-text);
+  border: 1px solid color-mix(in oklab, var(--nett-text-muted) 15%, transparent);
+  border-top-width: 3px;
+  border-radius: 10px;
+}
+
+.pf-v5-c-helper-text__item.pf-m-error,
+.pf-v5-c-helper-text__item-text.pf-m-error,
+.kc-feedback-text {
+  --pf-v5-c-helper-text__item--m-error__item-text--Color: var(--nett-text);
+  --pf-v5-c-helper-text__item--m-error__item-icon--Color: var(--nett-text);
+  color: var(--nett-text);
+}
+
+.pf-v5-c-form-control__icon.pf-m-status,
+.pf-v5-c-form-control.pf-m-error {
+  --pf-v5-c-form-control__icon--m-status--Color: var(--nett-text);
+}
+
+/* Cabeçalho e rodapé */
+#kc-header-wrapper {
+  color: var(--nett-gold) !important;
+}
+
+.pf-v5-c-login__main-footer-band {
+  border-top: 1px solid color-mix(in oklab, var(--nett-text-muted) 15%, transparent);
+  color: var(--nett-text-muted);
+}
+
+.kc-login-tooltip .kc-tooltip-text {
+  background-color: var(--nett-raised);
+  color: var(--nett-text);
+  box-shadow: 0 1px 8px color-mix(in oklab, var(--nett-black) 60%, transparent);
+}
+
+.kc-login-tooltip .kc-tooltip-text::after {
+  border-color: transparent var(--nett-raised) transparent transparent;
+}
+
+/* Seletor de idioma */
+.pf-v5-c-menu,
+.pf-v5-c-menu-toggle {
+  --pf-v5-c-menu--BackgroundColor: var(--nett-raised);
+  --pf-v5-c-menu-toggle--BackgroundColor: var(--nett-raised);
+  --pf-v5-c-menu-toggle--Color: var(--nett-text);
+  --pf-v5-c-menu__item--Color: var(--nett-text);
+  --pf-v5-c-menu__list-item--hover--BackgroundColor: color-mix(in oklab, var(--nett-gold) 15%, transparent);
+}

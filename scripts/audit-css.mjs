@@ -162,7 +162,8 @@ function arquivosVisuais(dir, lista = []) {
 
 const violacoes = [];
 const pendentesLimpos = new Set(PENDENCIAS_FORA_DA_AREA.keys());
-for (const full of arquivosVisuais(join(ROOT, 'src'))) {
+// T-104: o tema de login do Keycloak segue a mesma paleta.
+for (const full of [...arquivosVisuais(join(ROOT, 'src')), ...arquivosVisuais(join(ROOT, 'docker', 'keycloak', 'themes'))]) {
   const rel = full.slice(ROOT.length + 1).split('\\').join('/');
   const code = readFileSync(full, 'utf8');
   const fora = [];
