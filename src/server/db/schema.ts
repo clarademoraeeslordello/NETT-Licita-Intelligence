@@ -67,6 +67,7 @@ export const reviewStatusEnum = fromZod('review_status', c.reviewStatus.options)
 export const reviewSubjectEnum = fromZod('review_subject', c.reviewSubject.options);
 export const reviewDecisionEnum = fromZod('review_decision', c.reviewDecision.options);
 export const capabilityKindEnum = fromZod('capability_kind', c.capabilityKind.options);
+export const nettCategoryEnum = fromZod('nett_category', c.nettCategory.options);
 export const capabilitySubjectEnum = fromZod('capability_subject', c.capabilitySubject.options);
 export const alertChannelEnum = fromZod('alert_channel', c.searchProfile.shape.alertChannel.options);
 export const pipelineStageEnum = fromZod('pipeline_stage', c.pipelineStage.options);
@@ -319,12 +320,14 @@ export const matchScores = pgTable('match_scores', {
   caps: text('caps').array().notNull().default(sql`'{}'::text[]`),
   algorithmVersion: text('algorithm_version').notNull(),
   opportunityContentHash: text('opportunity_content_hash').notNull(),
+  primaryCategory: nettCategoryEnum('primary_category'),
   computedAt: tz('computed_at').notNull().defaultNow(),
 }, (t) => [
   foreignKey({ name: 'match_scores_profile_fk', columns: [t.searchProfileId, t.companyId], foreignColumns: [searchProfiles.id, searchProfiles.companyId] }).onDelete('cascade'),
   unique('match_scores_profile_opportunity_uq').on(t.searchProfileId, t.opportunityId),
   check('match_scores_range', sql`${t.score} between 0 and 100`),
   index('match_scores_company_score_idx').on(t.companyId, t.score),
+  index('match_scores_company_category_idx').on(t.companyId, t.primaryCategory, t.score),
 ]);
 
 /** Append-only: UPDATE/DELETE bloqueados por trigger (migration 0001). */

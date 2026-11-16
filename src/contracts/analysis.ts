@@ -5,7 +5,7 @@
 import { z } from 'zod';
 import { analiseSchema } from '../lib/schema';
 import { decimal, isoDateTime, sha256, uuid } from './common';
-import { fitAssessmentResult } from './fit';
+import { fitAssessmentResult, nettCategory } from './fit';
 
 /* ------------------------------- AIAnalysis ------------------------------ */
 
@@ -90,6 +90,8 @@ export const matchScore = z.object({
   caps: z.array(z.string()),
   algorithmVersion: z.string(),
   opportunityContentHash: sha256,
+  /** 1.4.0. Categoria comercial Nett predominante do objeto; null quando nenhuma categoria se destaca. Permite filtrar o radar em SQL. */
+  primaryCategory: nettCategory.nullable(),
   computedAt: isoDateTime,
 });
 export type MatchScore = z.infer<typeof matchScore>;

@@ -91,6 +91,13 @@ Quem pode propor: qualquer agente (via PR neste arquivo). Quem aceita: agente 01
 - **Por que não coluna em `opportunities`:** o teste de alinhamento exige colunas = campos do contrato (derivados não entram no contrato). Por que não `unaccent` no SQL: a função não é imutável, então não serve em índice de expressão sem wrapper.
 - **Entrega (T-215):** migration gerada por drizzle-kit na PR do agente 02, revisada por mim; backfill das oportunidades já gravadas; teste com `EXPLAIN` mostrando uso do índice.
 
+### ADR-025 — match.score: categoria persistida, frescor e fan-out de perfil · `aceita` (agente 01, 2026-11-16, pedido do agente 03)
+- **Uma fórmula, entradas em níveis.** A nota de triagem (`MatchScore`, radar) e a avaliação detalhada (`fit_assessment`) usam a MESMA `scoreCommercial`. A triagem parte de título, objeto e itens; na T-302, `document.extract` enfileira `match.score` e o cálculo passa a usar também o texto público extraído (com limite), de modo que as duas convergem quando há documento. `opportunityContentHash` inclui o hash do texto usado, para a idempotência continuar valendo. A UI rotula "nota de triagem" e "avaliação detalhada".
+- **`MatchScore.primaryCategory`** persistido (contrato 1.4.0, coluna `primary_category`, índice por empresa × categoria × nota): permite filtrar o radar por categoria em SQL. `getMatchSummaries` lê o valor gravado; o cálculo fica só como reserva para linhas antigas.
+- **Frescor:** o prazo entra na nota, então há reavaliação diária. Fila `match.refresh` (dono 03, `{}`), agendada às 05:10 America/Sao_Paulo; enfileira `match.score` das oportunidades abertas com `proposalsCloseAt` entre agora − 1 dia e agora + 8 dias.
+- **Fan-out de perfil:** fila `match.profile { searchProfileId }` (dono 03); percorre oportunidades abertas em lotes de 500 e enfileira `match.score { opportunityId, companyId }`. Quem enfileira é a API de SearchProfile (T-216).
+- **Volume (ADR-023):** não persistir `MatchScore` quando as travas `no_term_match` ou `excluded_term` se aplicam (T-305b), para não gravar notas irrelevantes por perfil.
+
 ### ADR-006 — Filas com pg-boss sobre o Postgres · `aceita`
 - **Decisão:** pg-boss no schema `pgboss` do mesmo banco. Contrato em `src/contracts/jobs.ts`.
 - **Alternativas:** Redis + BullMQ (mais um serviço); SQS (fora do Railway).

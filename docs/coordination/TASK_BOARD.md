@@ -53,7 +53,10 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | T-302 | `document.extract` (texto por página no storage) | T-106, T-203 | bloqueada |
 | T-303 | `analysis.run` + cache por `inputHash` + rotas `/analyses` | T-105, T-302, T-007 (provedor; motor local liberado) | bloqueada |
 | T-304 | `HumanReview` API + regras de `reviewStatus` | T-101, T-103 | concluída (PR #17); T-304b concluída (PR #21) |
-| T-305 | Aderência no servidor (`match.score`) a partir de `aderencia.ts` + capacidades — **reaproveitar `scoreCommercial` de `src/server/analysis/fit/commercial.ts`** (uma única nota comercial) | T-101, T-308 | em revisão (branch `agente-03/t305-match-score`) |
+| T-305 | Aderência no servidor (`match.score`) a partir de `aderencia.ts` + capacidades — **reaproveitar `scoreCommercial` de `src/server/analysis/fit/commercial.ts`** (uma única nota comercial) | T-101, T-308 | concluída (PR #21) |
+| T-305b | 03 | Não persistir `MatchScore` com travas `no_term_match` ou `excluded_term` (e apagar linha antiga); gravar `primaryCategory` (1.4.0); handlers `match.refresh` e `match.profile` (ADR-025) | T-305, contratos 1.4.0 | pronta |
+| T-216 | 03 | API de SearchProfile e CompanyCapability: GET/POST/PATCH em `/companies/{cid}/search-profiles` e `/capabilities`; enfileira `match.profile` | T-305 | pronta |
+| T-217 | 03 | `GET /companies/{cid}/radar` (Opportunity + MatchScore da empresa; filtros uf, modalidade, nota mínima, situação efetiva, prazo, categoria, q; ordenação por nota; cursor) | T-216, T-204 | bloqueada |
 | T-306 | Relatório PDF no worker (ADR-014) | T-105 | bloqueada |
 | T-307 | Testes de prompt injection com PDFs adversariais | T-301 | concluída (PR #6) |
 | T-308 | Motor `fit_assessment`: aderência comercial × habilitação, evidências, parecer, comparação com `HumanReview`, backtest (`src/server/analysis/fit`) | T-003 | concluída (PR #6) |
@@ -65,7 +68,7 @@ Cada tarefa fecha com PR + handoff. Critério de aceite verificado pelo agente 0
 | T-401 | Tokens da paleta Nett em `globals.css`, remover `brand/accent/ink` | — | concluída (PR #5) |
 | T-402 | Teste que falha com cor fora da paleta (substitui/estende `scripts/audit-css.mjs`) | T-401 | concluída (PR #5) |
 | T-403 | Shell autenticado, seletor de empresa | T-103 | concluída (PR #11, mesclada em 2026-11-15) |
-| T-404 | Radar, oportunidade, preços consumindo `/api/v1` | T-204 (concluída), T-305, T-213 | bloqueada |
+| T-404 | Radar, oportunidade, preços consumindo `/api/v1` | T-204 (concluída), T-217, T-213 | bloqueada |
 | T-405 | Tela de revisão humana da análise | T-304 | pronta |
 | T-406 | Pipeline persistido (`OpportunityTracking`) + cofre de certidões | T-101, T-103 | pronta |
 | T-407 | `metrics.compute` + painel de consultores | T-406, T-304 | bloqueada |
