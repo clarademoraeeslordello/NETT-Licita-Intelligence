@@ -54,6 +54,18 @@ const itemSchema = z.looseObject({
   tipoBeneficio: numero,
   catalogoCodigoItem: z.union([z.string(), z.number()]).nullish(),
   ncmNbsCodigo: texto,
+  temResultado: z.boolean().nullish(),
+});
+
+/** /pncp/v1/.../itens/{n}/resultados (T-214): fornecedor e preço unitário homologado de um item. */
+const resultadoSchema = z.looseObject({
+  niFornecedor: texto,
+  tipoPessoa: texto,
+  nomeRazaoSocialFornecedor: texto,
+  valorUnitarioHomologado: numero,
+  quantidadeHomologada: numero,
+  dataResultado: texto,
+  dataCancelamento: texto,
 });
 
 const arquivoSchema = z.looseObject({
@@ -71,6 +83,8 @@ export const pncpPayload = z.object({
   compra: compraSchema,
   itens: z.array(itemSchema).nullish(),
   arquivos: z.array(arquivoSchema).nullish(),
+  /** T-214: resultados por número do item (chave = `numeroItem` como texto). Ausente = não consultado. */
+  resultados: z.record(z.string(), z.array(resultadoSchema)).nullish(),
 });
 export type PncpPayload = z.infer<typeof pncpPayload>;
 
@@ -96,6 +110,23 @@ function status(c: z.infer<typeof compraSchema>) {
   // (normalização pura não usa `now`, senão o contentHash mudaria sem mudança na fonte).
   if (c.situacaoCompraId === 1) return 'published' as const;
   return 'unknown' as const;
+}
+
+/**
+ * Vencedor do item (T-214). O contrato guarda UM fornecedor por item: entre os resultados não cancelados com preço
+ * positivo vale o de maior quantidade homologada (empate: menor preço). CNPJ só com 14 dígitos: CPF de pessoa
+ * física nunca é gravado (minimização de dados pessoais); o nome do fornecedor é dado público do PNCP.
+ */
+export function vencedorDoItem(resultados: z.infer<typeof resultadoSchema>[] | undefined) {
+  const validos = (resultados ?? []).filter((r) => !r.dataCancelamento && (r.valorUnitarioHomologado ?? 0) > 0);
+  if (!validos.length) return null;
+  const melhor = [...validos].sort((a, b) => (b.quantidadeHomologada ?? 0) - (a.quantidadeHomologada ?? 0) || (a.valorUnitarioHomologado ?? 0) - (b.valorUnitarioHomologado ?? 0))[0]!;
+  return {
+    awardedUnitValue: toDecimal(melhor.valorUnitarioHomologado),
+    awardedSupplierCnpj: /^\d{14}$/.test(melhor.niFornecedor ?? '') ? melhor.niFornecedor! : null,
+    awardedSupplierName: limpar(melhor.nomeRazaoSocialFornecedor),
+    awardedAt: toIsoBrasilia(melhor.dataResultado),
+  };
 }
 
 /** tipoBeneficio do item: 1 exclusiva ME/EPP, 2 subcontratação, 3 cota reservada, 4 sem benefício, 5 não se aplica. */
@@ -174,7 +205,7 @@ export function partesControle(controle: string): { cnpj: string; ano: string; s
 export function normalizePncp(payload: unknown): NormalizeResult {
   const parsed = pncpPayload.safeParse(payload);
   if (!parsed.success) return { skip: `payload PNCP inválido: ${parsed.error.issues[0]?.path.join('.')} ${parsed.error.issues[0]?.message}` };
-  const { compra: c, itens, arquivos } = parsed.data;
+  const { compra: c, itens, arquivos, resultados } = parsed.data;
 
   const p = partesControle(c.numeroControlePNCP);
   const cnpj = c.orgaoEntidade?.cnpj ?? p?.cnpj;
@@ -198,10 +229,7 @@ export function normalizePncp(payload: unknown): NormalizeResult {
           judgingCriterion: limpar(i.criterioJulgamentoNome),
           meEppBenefit: beneficioItem(i.tipoBeneficio),
           catalogCode: limpar(i.catalogoCodigoItem == null ? null : String(i.catalogoCodigoItem)) ?? limpar(i.ncmNbsCodigo),
-          awardedUnitValue: null,
-          awardedSupplierCnpj: null,
-          awardedSupplierName: null,
-          awardedAt: null,
+          ...(vencedorDoItem(resultados?.[String(i.numeroItem)]) ?? { awardedUnitValue: null, awardedSupplierCnpj: null, awardedSupplierName: null, awardedAt: null }),
         });
       })
     : null;

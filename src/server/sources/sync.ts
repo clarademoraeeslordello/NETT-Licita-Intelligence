@@ -29,6 +29,9 @@ import { SourceRateLimited, type SyncableConnector, type SyncFeed } from './conn
 import { matchesAny, type ProfileFilter } from './filter';
 import { contentHashOf } from './pncp/normalize';
 
+/** Espera antes da 1ª tentativa de `source.enrich` (a fonte costuma estar em manutenção/instável nesse momento). */
+export const ENRICH_RETRY_DELAY_MS = Number(process.env.SOURCE_ENRICH_RETRY_DELAY_MS ?? 5 * 60_000);
+
 export type SyncLimits = { maxPages: number; enrichBudget: number; maxMs: number };
 export const DEFAULT_SYNC_LIMITS: SyncLimits = {
   maxPages: Number(process.env.SOURCE_SYNC_MAX_PAGES ?? 200),
@@ -74,7 +77,7 @@ export async function ensureSource(pool: Pool, c: SyncableConnector) {
   return row!;
 }
 
-async function activeProfiles(pool: Pool, sourceKey: string): Promise<ProfileFilter[]> {
+export async function activeProfiles(pool: Pool, sourceKey: string): Promise<ProfileFilter[]> {
   const rows = await dbOf(pool)
     .select({
       includeTerms: s.searchProfiles.includeTerms,
@@ -91,9 +94,9 @@ async function activeProfiles(pool: Pool, sourceKey: string): Promise<ProfileFil
 }
 
 /** Payload da versão mais recente gravada deste externalId (ou null). */
-async function latestPayload(pool: Pool, sourceId: string, externalId: string): Promise<{ payload: unknown } | null> {
+async function latestPayload(pool: Pool, sourceId: string, externalId: string): Promise<{ id: string; payload: unknown } | null> {
   const [row] = await dbOf(pool)
-    .select({ payload: s.sourceRecords.payload })
+    .select({ id: s.sourceRecords.id, payload: s.sourceRecords.payload })
     .from(s.sourceRecords)
     .where(and(eq(s.sourceRecords.sourceId, sourceId), eq(s.sourceRecords.externalId, externalId)))
     .orderBy(desc(s.sourceRecords.fetchedAt))
@@ -150,6 +153,10 @@ export async function syncSource(deps: SyncDeps, payload: JobPayload<'source.syn
     const profiles = await activeProfiles(deps.pool, source.key);
     let budget = limits.enrichBudget;
     let enrichPaused = false;
+    // T-211 (ADR-021): registros que casam com perfil mas ficaram só com a listagem por falha/pausa do enriquecimento.
+    // Quem foi regravado entra pelo externalId (o id só existe depois do insert); quem não foi regravado, pelo id da versão atual.
+    const enrichLaterNew = new Set<string>();
+    let enrichLaterIds: string[] = [];
 
     try {
       paginas: while (true) {
@@ -165,6 +172,8 @@ export async function syncSource(deps: SyncDeps, payload: JobPayload<'source.syn
         result.pages += 1;
         const rows: Array<{ externalId: string; payload: unknown }> = [];
         let parouNoMeio = false;
+        enrichLaterNew.clear();
+        enrichLaterIds = [];
 
         for (const record of page.records) {
           const listing = (p: unknown) => payloadHash(connector.listingOf ? connector.listingOf(p) : p);
@@ -201,16 +210,21 @@ export async function syncSource(deps: SyncDeps, payload: JobPayload<'source.syn
               log('warn', 'source.enrich_failed', { sourceKey: source.key, externalId: record.externalId, error: error instanceof Error ? error.message : String(error) });
             }
           }
-          // Inalterado e o enriquecimento falhou/pausou: a versão anterior continua válida.
+          const ficouSoListagem = precisaEnriquecer && recordPayload === record.payload;
+          // Inalterado e o enriquecimento falhou/pausou: a versão anterior continua válida (e vai para a fila de enriquecimento).
           if (inalterado && recordPayload === record.payload) {
+            if (ficouSoListagem && latest) enrichLaterIds.push(latest.id);
             result.records += 1;
             continue;
           }
+          if (ficouSoListagem) enrichLaterNew.add(record.externalId);
           rows.push({ externalId: record.externalId, payload: recordPayload });
         }
 
         // Grava a página e enfileira a normalização atomicamente.
         const client = await deps.pool.connect();
+        const enqueueEnrich = (c: PoolClient, sourceRecordId: string) =>
+          enqueueWith(deps.boss, 'source.enrich', { sourceRecordId }, { tx: c, startAfter: new Date(now().getTime() + ENRICH_RETRY_DELAY_MS) });
         try {
           await client.query('begin');
           const db = dbOf(client);
@@ -224,8 +238,10 @@ export async function syncSource(deps: SyncDeps, payload: JobPayload<'source.syn
             if (inserted[0]) {
               result.newRecords += 1;
               await enqueueWith(deps.boss, 'source.normalize', { sourceRecordId: inserted[0].id }, { tx: client });
+              if (enrichLaterNew.has(r.externalId)) await enqueueEnrich(client, inserted[0].id);
             }
           }
+          for (const id of enrichLaterIds) await enqueueEnrich(client, id);
           // Cursor: se a página foi interrompida, fica nela (relida na próxima execução). Na última página, o conector
           // pode marcar a varredura como concluída (`completedCursor`); sem isso, fica nela como antes.
           const terminou = !parouNoMeio && page.nextCursor === null;

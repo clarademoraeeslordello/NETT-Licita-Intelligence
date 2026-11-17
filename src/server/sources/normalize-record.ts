@@ -5,7 +5,8 @@
  *  - Opportunity única por `canonicalKey` (invariante 1): insere ou atualiza; `firstSeenAt` e
  *    `primarySourceId` preservados; `lastSeenAt` renovado.
  *  - Itens e documentos só são tocados quando o payload os traz (registro enriquecido).
- *    Itens: upsert por número, sem apagar resultados homologados; itens ausentes na fonte são removidos.
+ *    Itens: upsert por número; o vencedor (`awarded*`, T-214) só é escrito quando o payload traz `resultados`
+ *    (consultados), nunca por uma listagem sem eles; itens ausentes na fonte são removidos.
  *    Documentos públicos: deduplicados por (opportunityId, sourceUrl); novos → `document.fetch`.
  *  - `contentHash` mudou (ou oportunidade nova) → `match.score`.
  *  - Registro mais antigo que um já normalizado do mesmo externalId → `normalized` sem aplicar (fora de ordem).
@@ -109,17 +110,21 @@ export async function normalizeSourceRecord(deps: NormalizeDeps, sourceRecordId:
     const created = !anterior;
     const contentChanged = created || anterior!.contentHash !== o.contentHash;
 
-    const p = r.payload as { itens?: unknown; arquivos?: unknown } | null;
+    const p = r.payload as { itens?: unknown; arquivos?: unknown; resultados?: unknown } | null;
+    // T-214: só um registro que CONSULTOU os resultados (`resultados` presente) pode escrever/limpar o vencedor do item;
+    // listagem sem resultados nunca apaga o que um registro anterior já gravou.
+    const consultouResultados = p?.resultados != null && typeof p.resultados === 'object';
     let items: number | null = null;
     if (Array.isArray(p?.itens)) {
       items = result.items.length;
       for (const item of result.items) {
         const i = { ...item, awardedAt: data(item.awardedAt) };
-        const { awardedUnitValue: _a, awardedSupplierCnpj: _b, awardedSupplierName: _c, awardedAt: _d, ...estimativa } = i;
+        const { awardedUnitValue, awardedSupplierCnpj, awardedSupplierName, awardedAt, ...estimativa } = i;
+        const set = consultouResultados ? { ...estimativa, awardedUnitValue, awardedSupplierCnpj, awardedSupplierName, awardedAt } : estimativa;
         await db
           .insert(s.opportunityItems)
           .values({ ...i, opportunityId })
-          .onConflictDoUpdate({ target: [s.opportunityItems.opportunityId, s.opportunityItems.number], set: estimativa });
+          .onConflictDoUpdate({ target: [s.opportunityItems.opportunityId, s.opportunityItems.number], set });
       }
       const numeros = result.items.map((i) => i.number);
       await db

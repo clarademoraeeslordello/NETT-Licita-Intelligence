@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import fixtures from './__fixtures__/compras-reais.json';
 import { opportunity } from '@/contracts/sources';
 import './proposals.test'; // T-213 (propostas abertas): mesma execução de test:sources
+import './awarded.test'; // T-214 (resultados homologados)
 import '../documents/download.test'; // T-203 (document.fetch, SSRF e limites)
 import { PncpConnector, pncpCursor } from './connector';
 import { normalizePncp, toDecimal, urlDocumentoPermitida } from './normalize';

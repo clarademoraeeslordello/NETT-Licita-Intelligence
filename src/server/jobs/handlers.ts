@@ -8,6 +8,7 @@ import { JOB_DEFAULTS } from '@/contracts/jobs';
 import type { SyncableConnector } from '../sources/connector';
 import { markNormalizationError, normalizeSourceRecord } from '../sources/normalize-record';
 import { PncpConnector } from '../sources/pncp/connector';
+import { enrichSourceRecord, recordEnrichFailure } from '../sources/enrich-record';
 import { fetchDocument } from '../sources/documents/fetch';
 import { getStorage, type ObjectStorage } from '../storage';
 import { continuationDelayMs, syncSource, type SyncLimits } from '../sources/sync';
@@ -50,6 +51,16 @@ export function buildRegistry(deps: HandlerDeps): JobRegistry {
       } catch (error) {
         // Última tentativa: registra o erro no SourceRecord (fica visível e reprocessável).
         if (ctx.retryCount >= JOB_DEFAULTS.retryLimit) await markNormalizationError(deps.pool, sourceRecordId, error instanceof Error ? error.message : String(error));
+        throw error;
+      }
+    })
+    // T-211 (ADR-021): retenta o enriquecimento de um registro que ficou só com a listagem.
+    .register('source.enrich', async ({ sourceRecordId }, ctx) => {
+      try {
+        await enrichSourceRecord({ pool: deps.pool, boss: deps.boss, connectors }, sourceRecordId);
+      } catch (error) {
+        // Última tentativa: a oportunidade fica só com a listagem e o rastro vai para a auditoria.
+        if (ctx.retryCount >= JOB_DEFAULTS.retryLimit) await recordEnrichFailure(deps.pool, sourceRecordId, error instanceof Error ? error.message : String(error));
         throw error;
       }
     })

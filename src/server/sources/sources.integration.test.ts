@@ -7,7 +7,7 @@
  */
 import assert from 'node:assert/strict';
 import { after, before, beforeEach, test } from 'node:test';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import type { PgBoss } from 'pg-boss';
@@ -17,6 +17,7 @@ import { stableKey } from '../jobs/enqueue';
 import { buildRegistry } from '../jobs/handlers';
 import { setupJobs } from '../jobs/setup';
 import { SourceRateLimited, type FetchPageResult, type SyncableConnector, type SyncFeed } from './connector';
+import { enrichSourceRecord } from './enrich-record';
 import { normalizeSourceRecord } from './normalize-record';
 import fixturesReais from './pncp/__fixtures__/compras-reais.json';
 import { normalizePncp } from './pncp/normalize';
@@ -370,7 +371,7 @@ test('handler registrado: source.sync e source.normalize via JobRegistry', async
   fake.pages = [[]];
   const reg = buildRegistry({ pool, boss, connectors: new Map([[KEY, fake]]) });
   // match.* são do agente 03 (T-305, contratos 1.4.0) e também são registrados em buildRegistry.
-  assert.deepEqual(reg.names().sort(), ['document.fetch', 'match.profile', 'match.refresh', 'match.score', 'source.normalize', 'source.sync']);
+  assert.deepEqual(reg.names().sort(), ['document.fetch', 'match.profile', 'match.refresh', 'match.score', 'source.enrich', 'source.normalize', 'source.sync']);
   await reg.run('source.sync', { sourceKey: KEY, mode: 'incremental' }, { jobId: 'x', retryCount: 0, signal: new AbortController().signal });
   await assert.rejects(() => reg.run('source.normalize', { sourceRecordId: 'nao-uuid' }, { jobId: 'x', retryCount: 0, signal: new AbortController().signal }));
 });
@@ -471,4 +472,115 @@ test('handler: proposals interrompido por orçamento reenfileira o mesmo payload
   const updates = { sourceKey: KEY, mode: 'incremental' as const };
   await reg.run('source.sync', updates, ctx);
   assert.equal((await boss.findJobs('source.sync', { key: stableKey(updates), queued: true })).length, 0);
+});
+
+// ---- T-211 / ADR-021: fila source.enrich ----
+
+const numeroFx = (f: (typeof fx)[number], seq: number) => ({ numeroControlePNCP: `${f.compra.numeroControlePNCP.slice(0, 17)}${String(seq).padStart(6, '0')}/2026`, sequencialCompra: seq });
+const registrosDe = async (externalId: string) => {
+  const [src] = await db().select().from(s.sources).where(eq(s.sources.key, KEY));
+  return db().select().from(s.sourceRecords).where(and(eq(s.sourceRecords.sourceId, src!.id), eq(s.sourceRecords.externalId, externalId)));
+};
+
+test('T-211: falha de enriquecimento enfileira source.enrich (com espera) para o registro gravado só com a listagem', async () => {
+  const novo = listagem(fx[0], numeroFx(fx[0], 960));
+  fake.pages = [[novo]];
+  fake.enrichFails = true;
+  await db().update(s.sources).set({ lastCursor: { page: 0 } }).where(eq(s.sources.key, KEY));
+  const r = await syncSource(deps(), { sourceKey: KEY, mode: 'incremental' });
+  assert.equal(r.enrichErrors, 1);
+  const [rec] = await registrosDe(novo.externalId);
+  assert.ok(!Array.isArray((rec!.payload as { itens?: unknown }).itens), 'gravado só com a listagem');
+  const jobs = await boss.findJobs('source.enrich', { key: stableKey({ sourceRecordId: rec!.id }), queued: true });
+  assert.equal(jobs.length, 1);
+  assert.ok(jobs[0]!.startAfter.getTime() > Date.now() + 60_000, 'espera antes da 1ª tentativa');
+});
+
+test('T-211: source.enrich grava NOVA versão enriquecida (a antiga intacta), enfileira normalize e é idempotente', async () => {
+  const externalId = listagem(fx[0], numeroFx(fx[0], 960)).externalId;
+  const [antiga] = await registrosDe(externalId);
+  fake.enrich = async (p: unknown) => ({ ...fx[0], compra: (p as { compra: unknown }).compra });
+  const r1 = await enrichSourceRecord(deps(), antiga!.id);
+  assert.equal(r1.status, 'enriched');
+  const novas = await registrosDe(externalId);
+  assert.equal(novas.length, 2);
+  const nova = novas.find((x) => x.id !== antiga!.id)!;
+  assert.ok(Array.isArray((nova.payload as { itens?: unknown }).itens));
+  const [intacta] = (await registrosDe(externalId)).filter((x) => x.id === antiga!.id);
+  assert.deepEqual(intacta!.payload, antiga!.payload); // invariante 2: payload antigo nunca é alterado
+  assert.equal((await boss.findJobs('source.normalize', { key: stableKey({ sourceRecordId: nova.id }), queued: true })).length, 1);
+  // Reexecução (ex.: retentativa do pg-boss): já há versão enriquecida, não chama a fonte nem duplica linhas.
+  const antes = fake.enrichCalls;
+  assert.equal((await enrichSourceRecord(deps(), antiga!.id)).status, 'already_enriched');
+  assert.equal((await registrosDe(externalId)).length, 2);
+  assert.equal(fake.enrichCalls, antes);
+});
+
+test('T-211: 429 no source.enrich reenfileira o mesmo job após o cooldown, sem retentar; falha comum lança (pg-boss retenta)', async () => {
+  const novo = listagem(fx[0], numeroFx(fx[0], 961));
+  fake.pages = [[novo]];
+  fake.enrichFails = true;
+  await db().update(s.sources).set({ lastCursor: { page: 0 } }).where(eq(s.sources.key, KEY));
+  await syncSource(deps(), { sourceKey: KEY, mode: 'incremental' });
+  const [rec] = await registrosDe(novo.externalId);
+
+  fake.enrichFails = false;
+  let chamadas = 0;
+  fake.enrich = async () => (chamadas += 1, Promise.reject(new SourceRateLimited('429 simulado', 900_000)));
+  assert.deepEqual(await enrichSourceRecord(deps(), rec!.id), { status: 'rate_limited', retryAfterMs: 900_000 });
+  assert.equal(chamadas, 1);
+  assert.equal((await registrosDe(novo.externalId)).length, 1, 'nada gravado');
+
+  fake.enrich = async () => Promise.reject(new Error('PNCP 503 simulado'));
+  await assert.rejects(enrichSourceRecord(deps(), rec!.id), /503/);
+});
+
+test('T-211: registro que já não casa com nenhum perfil ativo não gasta requisição à fonte', async () => {
+  const fora = listagem(fx[1], numeroFx(fx[1], 962)); // não casa com o perfil de frota
+  fake.pages = [[fora]];
+  await db().update(s.sources).set({ lastCursor: { page: 0 } }).where(eq(s.sources.key, KEY));
+  await syncSource(deps(), { sourceKey: KEY, mode: 'incremental' });
+  const [rec] = await registrosDe(fora.externalId);
+  const antes = fake.enrichCalls;
+  assert.deepEqual(await enrichSourceRecord(deps(), rec!.id), { status: 'not_relevant' });
+  assert.equal(fake.enrichCalls, antes);
+  assert.deepEqual(await enrichSourceRecord(deps(), '00000000-0000-4000-8000-000000000000'), { status: 'missing' });
+});
+
+// ---- T-214: vencedor do item (awarded*) ----
+
+test('T-214: awarded* só é escrito/limpo por registro que consultou os resultados; listagem sem eles preserva', async () => {
+  const [src] = await db().select().from(s.sources).where(eq(s.sources.key, KEY));
+  const compra = { ...fx[0].compra, ...numeroFx(fx[0], 970), existeResultado: true };
+  const numero = fx[0].itens[0]!.numeroItem;
+  const normalizada = normalizePncp({ ...fx[0], compra });
+  if ('skip' in normalizada) throw new Error(normalizada.skip);
+  const canonicalKey = normalizada.opportunity.canonicalKey;
+  const gravar = async (payload: unknown) => {
+    const [rec] = await db().insert(s.sourceRecords).values({ sourceId: src!.id, externalId: compra.numeroControlePNCP, payload, payloadHash: payloadHashOf(payload) }).returning({ id: s.sourceRecords.id });
+    await normalizeSourceRecord(deps(), rec!.id);
+  };
+  const vencedor = async () => {
+    const [opp] = await db().select({ id: s.opportunities.id }).from(s.opportunities).where(eq(s.opportunities.canonicalKey, canonicalKey));
+    const [i] = await db().select().from(s.opportunityItems).where(and(eq(s.opportunityItems.opportunityId, opp!.id), eq(s.opportunityItems.number, numero)));
+    return i!;
+  };
+  const resultado = { niFornecedor: '98765432000110', nomeRazaoSocialFornecedor: 'Fornecedora Exemplo LTDA', valorUnitarioHomologado: 54.96, quantidadeHomologada: 10, dataResultado: '2026-11-10T10:00:00', dataCancelamento: null };
+
+  await gravar({ ...fx[0], compra, resultados: { [numero]: [resultado] } });
+  let i = await vencedor();
+  assert.equal(i.awardedUnitValue, '54.9600');
+  assert.equal(i.awardedSupplierCnpj, '98765432000110');
+  assert.ok(i.awardedAt);
+
+  // Nova listagem (sem consultar resultados): o vencedor já gravado não é apagado.
+  await gravar({ ...fx[0], compra: { ...compra, objetoCompra: `${compra.objetoCompra} (retificado)` } });
+  i = await vencedor();
+  assert.equal(i.awardedUnitValue, '54.9600');
+
+  // Resultado cancelado numa nova consulta: o vencedor é limpo.
+  await gravar({ ...fx[0], compra, resultados: { [numero]: [{ ...resultado, dataCancelamento: '2026-11-12T00:00:00' }] } });
+  i = await vencedor();
+  assert.equal(i.awardedUnitValue, null);
+  assert.equal(i.awardedSupplierCnpj, null);
 });

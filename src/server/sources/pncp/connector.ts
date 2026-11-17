@@ -29,6 +29,8 @@ const ITENS_POR_PAGINA = 100;
 const MAX_PAGINAS_ITENS = 20;
 /** Pausa depois de um HTTP 429 (a retomada só ocorre depois dela). */
 export const COOLDOWN_429_MS = Number(process.env.PNCP_429_COOLDOWN_MS ?? 15 * 60_000);
+/** T-214: máximo de itens (com resultado) por compra cujos resultados são consultados (cada um é 1 requisição lenta). */
+export const MAX_ITENS_RESULTADOS = Number(process.env.PNCP_MAX_ITENS_RESULTADOS ?? 20);
 /** Até quantos dias à frente a partição `proposals` olha (`dataFinal`). */
 export const PROPOSALS_HORIZON_DAYS = Number(process.env.PNCP_PROPOSALS_HORIZON_DAYS ?? 180);
 
@@ -172,7 +174,10 @@ export class PncpConnector implements SyncableConnector {
 
   isEnriched(payload: unknown): boolean {
     const p = payload as Partial<PncpPayload> | null;
-    return Array.isArray(p?.itens) && Array.isArray(p?.arquivos);
+    if (!Array.isArray(p?.itens) || !Array.isArray(p?.arquivos)) return false;
+    // T-214: compra com resultado só está completa depois de consultados os resultados dos itens.
+    const comResultado = Boolean(p?.compra?.existeResultado) || (p?.compra?.valorTotalHomologado ?? 0) > 0;
+    return !comResultado || p?.resultados != null;
   }
 
   /** GET ao PNCP: 429 nunca é retentado — abre o cooldown e sinaliza `SourceRateLimited`. */
@@ -266,7 +271,33 @@ export class PncpConnector implements SyncableConnector {
       if (lote.length < ITENS_POR_PAGINA) break;
     }
     const arquivos = await this.get<unknown[]>(`${raiz}/arquivos`, { ttlMs: 10 * 60_000 });
-    return { ...base, itens, arquivos } as PncpPayload;
+    const resultados = await this.resultados(raiz, base, itens);
+    return { ...base, itens, arquivos, ...(resultados ? { resultados } : {}) } as PncpPayload;
+  }
+
+  /**
+   * T-214: preço e fornecedor homologados por item (`/itens/{n}/resultados`), só para compra com resultado e para os itens
+   * que o PNCP marca com `temResultado`, até `MAX_ITENS_RESULTADOS`. Sequencial (o espaçamento ≥ 1 s vale para cada chamada).
+   * 404/204 de um item = sem resultado dele; 429 para tudo (`SourceRateLimited`); outra falha lança e a retentativa fica
+   * com `source.enrich` (a compra não fica "enriquecida pela metade" sem resultados).
+   */
+  private async resultados(raiz: string, base: PncpPayload, itens: unknown[]): Promise<Record<string, unknown[]> | null> {
+    const comResultado = Boolean(base.compra.existeResultado) || (base.compra.valorTotalHomologado ?? 0) > 0;
+    if (!comResultado) return null;
+    const numeros = (itens as Array<{ numeroItem?: number; temResultado?: boolean }>)
+      .filter((i) => i.temResultado === true && Number.isInteger(i.numeroItem))
+      .map((i) => i.numeroItem!)
+      .slice(0, MAX_ITENS_RESULTADOS);
+    const out: Record<string, unknown[]> = {};
+    for (const n of numeros) {
+      try {
+        out[String(n)] = await this.get<unknown[]>(`${raiz}/itens/${n}/resultados`, { ttlMs: 10 * 60_000, timeoutMs: 20_000 });
+      } catch (error) {
+        if (error instanceof AppError && error.code === 'NOT_FOUND') out[String(n)] = [];
+        else throw error;
+      }
+    }
+    return out;
   }
 
   normalize(payload: unknown): NormalizeResult {
