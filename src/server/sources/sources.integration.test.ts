@@ -13,9 +13,10 @@ import { Pool } from 'pg';
 import type { PgBoss } from 'pg-boss';
 import * as s from '../db/schema';
 import { createBoss } from '../jobs/boss';
+import { stableKey } from '../jobs/enqueue';
 import { buildRegistry } from '../jobs/handlers';
 import { setupJobs } from '../jobs/setup';
-import type { FetchPageResult, SyncableConnector } from './connector';
+import { SourceRateLimited, type FetchPageResult, type SyncableConnector, type SyncFeed } from './connector';
 import { normalizeSourceRecord } from './normalize-record';
 import fixturesReais from './pncp/__fixtures__/compras-reais.json';
 import { normalizePncp } from './pncp/normalize';
@@ -52,6 +53,8 @@ class FakeConnector implements SyncableConnector {
   fetches: number[] = [];
   enrichCalls = 0;
   enrichFails = false;
+  /** Página em que a fonte responde 429 (T-213). */
+  rateLimitAt: number | null = null;
   cursorFrom() {
     return { page: 0 };
   }
@@ -61,6 +64,7 @@ class FakeConnector implements SyncableConnector {
   async fetchPage(cursor: unknown): Promise<FetchPageResult> {
     const page = (cursor as { page: number }).page;
     this.fetches.push(page);
+    if (this.rateLimitAt === page) throw new SourceRateLimited('429 simulado', 900_000);
     return { records: this.pages[page] ?? [], nextCursor: page + 1 < this.pages.length ? { page: page + 1 } : null };
   }
   normalize(payload: unknown) {
@@ -117,7 +121,7 @@ before(async () => {
 });
 
 after(async () => {
-  for (const q of ['source.normalize', 'document.fetch', 'match.score'] as const) await boss.deleteQueuedJobs(q);
+  for (const q of ['source.sync', 'source.normalize', 'document.fetch', 'match.score'] as const) await boss.deleteQueuedJobs(q);
   await boss.stop({ graceful: false });
   // Ordem pelas FKs: perfil → empresa → usuário. Roda mesmo se algum teste falhou.
   if (criados.profileId) await db().delete(s.searchProfiles).where(eq(s.searchProfiles.id, criados.profileId));
@@ -369,4 +373,102 @@ test('handler registrado: source.sync e source.normalize via JobRegistry', async
   assert.deepEqual(reg.names().sort(), ['match.profile', 'match.refresh', 'match.score', 'source.normalize', 'source.sync']);
   await reg.run('source.sync', { sourceKey: KEY, mode: 'incremental' }, { jobId: 'x', retryCount: 0, signal: new AbortController().signal });
   await assert.rejects(() => reg.run('source.normalize', { sourceRecordId: 'nao-uuid' }, { jobId: 'x', retryCount: 0, signal: new AbortController().signal }));
+});
+
+// ---- T-213 / ADR-023: orçamento de tempo, 429 sem retentativa, cursor por feed, continuação ----
+
+/** Conector com um cursor por feed dentro de `last_cursor` ({ v: 2, feeds }), como o PncpConnector. */
+class FeedConnector extends FakeConnector {
+  override cursorFrom(_since?: Date | null, _feed?: SyncFeed) {
+    return { page: 0 };
+  }
+  override resumeCursor(saved: unknown, feed: SyncFeed = 'updates') {
+    const c = (saved as { feeds?: Record<string, { page: number; done?: boolean }> } | null)?.feeds?.[feed];
+    return c && !c.done ? c : null; // varredura concluída recomeça
+  }
+  storeCursor(current: unknown, feed: SyncFeed, cursor: unknown) {
+    return { v: 2, feeds: { ...((current as { feeds?: object } | null)?.feeds ?? {}), [feed]: cursor } };
+  }
+  completedCursor(cursor: unknown) {
+    return { ...(cursor as object), done: true };
+  }
+}
+
+test('orçamento de tempo: para antes da próxima página, mantém o cursor nela e marca partial (time_budget)', async () => {
+  fake.pages = [[listagem(fx[0])], [listagem(fx[1])], [listagem(fx[2])]];
+  await db().update(s.sources).set({ lastCursor: { page: 0 } }).where(eq(s.sources.key, KEY));
+  let relogio = Date.parse('2026-11-17T12:00:00Z');
+  const r = await syncSource({ ...deps(), limits: { maxMs: 600_000 }, now: () => new Date((relogio += 400_000)) }, { sourceKey: KEY, mode: 'incremental' });
+  assert.equal(r.stoppedBy, 'time_budget');
+  assert.equal(r.status, 'partial');
+  assert.equal(r.pages, 1);
+  assert.deepEqual(fake.fetches, [0]);
+  const [src] = await db().select().from(s.sources).where(eq(s.sources.key, KEY));
+  assert.deepEqual(src!.lastCursor, { page: 1 }); // retoma na página seguinte
+});
+
+test('429 nunca é retentado: execução parcial sem erro, 1 só tentativa na página, cursor mantido e cooldown informado', async () => {
+  fake.pages = [[listagem(fx[0])], [listagem(fx[1])]];
+  fake.rateLimitAt = 1;
+  await db().update(s.sources).set({ lastCursor: { page: 0 } }).where(eq(s.sources.key, KEY));
+  const r = await syncSource(deps(), { sourceKey: KEY, mode: 'incremental' }); // não lança: o pg-boss não retenta
+  assert.equal(r.status, 'partial');
+  assert.equal(r.stoppedBy, 'rate_limited');
+  assert.equal(r.cooldownMs, 900_000);
+  assert.deepEqual(fake.fetches, [0, 1], 'a página que recebeu 429 foi pedida UMA vez');
+  const [src] = await db().select().from(s.sources).where(eq(s.sources.key, KEY));
+  assert.deepEqual(src!.lastCursor, { page: 1 }); // a página 0 foi gravada; retoma na que recebeu 429
+  assert.equal(src!.lastSyncStatus, 'partial');
+});
+
+test('429 durante o enriquecimento também encerra a execução sem retentar', async () => {
+  // Registro novo (os de fx[0] já foram gravados e enriquecidos por testes anteriores: não precisariam de enriquecimento).
+  fake.pages = [[listagem(fx[0], { numeroControlePNCP: `${fx[0].compra.numeroControlePNCP.slice(0, 17)}000951/2026`, sequencialCompra: 951 })]];
+  fake.enrich = async () => {
+    fake.enrichCalls += 1;
+    throw new SourceRateLimited('429 simulado', 900_000);
+  };
+  await db().update(s.sources).set({ lastCursor: { page: 0 } }).where(eq(s.sources.key, KEY));
+  const r = await syncSource(deps(), { sourceKey: KEY, mode: 'incremental' });
+  assert.equal(r.stoppedBy, 'rate_limited');
+  assert.equal(fake.enrichCalls, 1);
+  assert.equal(r.enrichErrors, 0); // limite da fonte não é falha de enriquecimento
+});
+
+test('cursor por feed: proposals não apaga o cursor de updates e uma varredura concluída recomeça na vez seguinte', async () => {
+  const feeds = new FeedConnector();
+  const d = () => ({ pool, boss, connectors: new Map<string, SyncableConnector>([[KEY, feeds]]) });
+  feeds.pages = [[listagem(fx[0])]];
+  await db().update(s.sources).set({ lastCursor: { v: 2, feeds: { updates: { page: 9 } } } }).where(eq(s.sources.key, KEY));
+  const r1 = await syncSource(d(), { sourceKey: KEY, mode: 'incremental', feed: 'proposals' });
+  assert.equal(r1.feed, 'proposals');
+  assert.equal(r1.stoppedBy, 'caught_up');
+  let [src] = await db().select().from(s.sources).where(eq(s.sources.key, KEY));
+  assert.deepEqual(src!.lastCursor, { v: 2, feeds: { updates: { page: 9 }, proposals: { page: 0, done: true } } });
+  // Nova execução de proposals: recomeça do início (cursor concluído); o do updates continua intacto.
+  feeds.fetches = [];
+  await syncSource(d(), { sourceKey: KEY, mode: 'incremental', feed: 'proposals' });
+  assert.deepEqual(feeds.fetches, [0]);
+  [src] = await db().select().from(s.sources).where(eq(s.sources.key, KEY));
+  assert.deepEqual((src!.lastCursor as { feeds: { updates: unknown } }).feeds.updates, { page: 9 });
+  // O feed updates retoma o seu próprio cursor (página 9), não o de proposals.
+  feeds.fetches = [];
+  await syncSource(d(), { sourceKey: KEY, mode: 'incremental' });
+  assert.deepEqual(feeds.fetches, [9]);
+});
+
+test('handler: proposals interrompido por orçamento reenfileira o mesmo payload (startAfter); updates não', async () => {
+  fake.pages = [[]];
+  const reg = buildRegistry({ pool, boss, connectors: new Map([[KEY, fake]]), limits: { maxMs: 0 } });
+  const ctx = { jobId: 'x', retryCount: 0, signal: new AbortController().signal };
+  const proposals = { sourceKey: KEY, mode: 'incremental' as const, feed: 'proposals' as const };
+  await reg.run('source.sync', proposals, ctx);
+  const filhos = await boss.findJobs('source.sync', { key: stableKey(proposals), queued: true });
+  assert.equal(filhos.length, 1);
+  assert.ok(filhos[0]!.startAfter.getTime() > Date.now() + 10_000, 'a continuação espera, não roda de imediato');
+  await reg.run('source.sync', proposals, ctx); // idempotente: não duplica
+  assert.equal((await boss.findJobs('source.sync', { key: stableKey(proposals), queued: true })).length, 1);
+  const updates = { sourceKey: KEY, mode: 'incremental' as const };
+  await reg.run('source.sync', updates, ctx);
+  assert.equal((await boss.findJobs('source.sync', { key: stableKey(updates), queued: true })).length, 0);
 });

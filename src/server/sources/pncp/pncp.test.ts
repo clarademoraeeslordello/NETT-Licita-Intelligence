@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fixtures from './__fixtures__/compras-reais.json';
 import { opportunity } from '@/contracts/sources';
+import './proposals.test'; // T-213 (propostas abertas): mesma execução de test:sources
 import { PncpConnector, pncpCursor } from './connector';
 import { normalizePncp, toDecimal, urlDocumentoPermitida } from './normalize';
 

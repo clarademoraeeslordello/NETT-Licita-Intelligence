@@ -8,7 +8,7 @@ import { JOB_DEFAULTS } from '@/contracts/jobs';
 import type { SyncableConnector } from '../sources/connector';
 import { markNormalizationError, normalizeSourceRecord } from '../sources/normalize-record';
 import { PncpConnector } from '../sources/pncp/connector';
-import { syncSource, type SyncLimits } from '../sources/sync';
+import { continuationDelayMs, syncSource, type SyncLimits } from '../sources/sync';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { schema } from '../db';
 import { fanOutProfile, refreshOpenOpportunities, scoreOpportunity } from '../matching';
@@ -35,7 +35,10 @@ export function buildRegistry(deps: HandlerDeps): JobRegistry {
   const connectors = deps.connectors ?? defaultConnectors();
   return new JobRegistry()
     .register('source.sync', async (payload) => {
-      await syncSource({ pool: deps.pool, boss: deps.boss, connectors, limits: deps.limits }, payload);
+      const result = await syncSource({ pool: deps.pool, boss: deps.boss, connectors, limits: deps.limits }, payload);
+      // Partição `proposals`: continua do cursor depois do orçamento/cooldown (nunca retenta 429 antes do cooldown).
+      const delay = continuationDelayMs(payload, result);
+      if (delay !== null) await enqueueWith(deps.boss, 'source.sync', payload, { startAfter: new Date(Date.now() + delay) });
     })
     .register('source.normalize', async ({ sourceRecordId }, ctx) => {
       try {
@@ -61,10 +64,13 @@ export function buildRegistry(deps: HandlerDeps): JobRegistry {
 
 /** Agendamentos do agente 02 (cron em America/Sao_Paulo). Desligáveis com valor vazio. */
 export function sourceSchedules(env: Record<string, string | undefined> = process.env) {
-  const out: Array<{ name: 'source.sync'; cron: string; data: { sourceKey: string; mode: 'incremental' | 'backfill' } }> = [];
+  const out: Array<{ name: 'source.sync'; cron: string; data: { sourceKey: string; mode: 'incremental' | 'backfill'; feed?: 'updates' | 'proposals' } }> = [];
   const incremental = env.SOURCE_SYNC_CRON ?? '7 * * * *';
   const backfill = env.SOURCE_BACKFILL_CRON ?? '17 4 * * *';
   if (incremental) out.push({ name: 'source.sync', cron: incremental, data: { sourceKey: 'pncp', mode: 'incremental' } });
   if (backfill) out.push({ name: 'source.sync', cron: backfill, data: { sourceKey: 'pncp', mode: 'backfill' } });
+  // ADR-023: propostas abertas, a cada 6 h (uma varredura por vez; retomada pelo próprio handler). Vazio desliga.
+  const proposals = env.SOURCE_PROPOSALS_CRON ?? '23 */6 * * *';
+  if (proposals) out.push({ name: 'source.sync', cron: proposals, data: { sourceKey: 'pncp', mode: 'incremental', feed: 'proposals' } });
   return out;
 }

@@ -26,6 +26,19 @@ export type PncpFetchOptions = {
   retries?: number;
 };
 
+/**
+ * HTTP 429 do PNCP: NUNCA retentado (insistir prolonga o bloqueio do IP; limite de terceiro é obrigatório).
+ * Quem chama deve parar e retomar depois do cooldown.
+ */
+export class PncpRateLimited extends AppError {
+  readonly rateLimited = true as const;
+  constructor(url: string) {
+    super('PNCP_UNAVAILABLE', 'O PNCP limitou as requisições (HTTP 429).', { status: 429, details: url.replace(/\?.*$/, '') });
+    this.name = 'PncpRateLimited';
+  }
+}
+export const isPncpRateLimited = (e: unknown): e is PncpRateLimited => e instanceof PncpRateLimited;
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function remember(key: string, value: unknown, ttlMs: number): void {
@@ -72,6 +85,7 @@ async function request<T>(url: string, timeoutMs: number, retries: number): Prom
 
       // 204 = "sem registros" (ex.: compra sem itens publicados).
       if (response.status === 204) return [] as T;
+      if (response.status === 429) throw new PncpRateLimited(url);
       if (response.status === 404) throw new AppError('NOT_FOUND', 'Registro não encontrado no PNCP.', { status: 404 });
       if (!response.ok) {
         lastError = new Error(`PNCP respondeu ${response.status}`);

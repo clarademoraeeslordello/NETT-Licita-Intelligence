@@ -2,36 +2,69 @@
  * `SourceConnector` do PNCP sobre o cliente herdado (`src/lib/pncp/client.ts`): mantém cache,
  * deduplicação de requisições, retentativa com backoff e o disjuntor do /consulta.
  *
- * Paginação: /consulta/v1/contratacoes/atualizacao (compras novas OU alteradas no dia), por
- * modalidade × dia, do dia `since` até `until` (padrão: hoje). O cursor é JSON serializável e
- * retomável (guardado em `Source.lastCursor` por T-202).
+ * Dois feeds (contratos 1.5.0, ADR-023), cada um com cursor próprio dentro de `Source.lastCursor`
+ * (`{ v: 2, feeds: { updates?, proposals? } }`; o formato antigo, um cursor `updates` solto, continua aceito):
+ *  - `updates`  — /consulta/v1/contratacoes/atualizacao (compras novas OU alteradas no dia), por modalidade × dia,
+ *                 do dia `since` até `until` (padrão: hoje).
+ *  - `proposals` — /consulta/v1/contratacoes/proposta (propostas abertas até `dataFinal`), por modalidade em
+ *                 sequência; uma varredura completa e depois recomeça do início (`done`).
+ * Os cursores são JSON serializáveis e retomáveis.
  *
  * `fetchPage` devolve só a compra (barato: 1 requisição por 50 registros). `enrich` acrescenta itens
  * e arquivos (2+ requisições por compra) e deve ser chamado apenas para registros relevantes
  * (filtro por SearchProfile em T-202), respeitando o limite da fonte.
+ *
+ * HTTP 429 nunca é retentado: vira `SourceRateLimited` (o sync para e retoma depois do cooldown).
  */
 import { z } from 'zod';
 import { AppError } from '@/lib/errors';
-import { pncpGet } from '@/lib/pncp/client';
-import { abrirDisjuntorConsulta, consultaBloqueada } from '@/lib/pncp/disjuntor';
-import type { FetchPageResult, NormalizeResult, SyncableConnector } from '../connector';
+import { isPncpRateLimited, pncpGet, type PncpFetchOptions } from '@/lib/pncp/client';
+import { abrirDisjuntorConsulta, consultaBloqueada, consultaBloqueadaAte } from '@/lib/pncp/disjuntor';
+import { SourceRateLimited, type FetchPageResult, type NormalizeResult, type SyncableConnector, type SyncFeed } from '../connector';
 import { normalizePncp, partesControle, type PncpPayload } from './normalize';
 
 export const PNCP_SOURCE_KEY = 'pncp';
-export const PAGE_SIZE = 50; // máximo aceito pela API de consulta
+export const PAGE_SIZE = 50; // máximo aceito pela API de consulta (51 → HTTP 400)
 const ITENS_POR_PAGINA = 100;
 const MAX_PAGINAS_ITENS = 20;
+/** Pausa depois de um HTTP 429 (a retomada só ocorre depois dela). */
+export const COOLDOWN_429_MS = Number(process.env.PNCP_429_COOLDOWN_MS ?? 15 * 60_000);
+/** Até quantos dias à frente a partição `proposals` olha (`dataFinal`). */
+export const PROPOSALS_HORIZON_DAYS = Number(process.env.PNCP_PROPOSALS_HORIZON_DAYS ?? 180);
 
 const dia = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const modalidades = z.array(z.number().int().positive()).min(1);
 export const pncpCursor = z.object({
   v: z.literal(1),
   day: dia,
   until: dia,
-  modalities: z.array(z.number().int().positive()).min(1),
+  modalities: modalidades,
   modalityIndex: z.number().int().nonnegative(),
   page: z.number().int().positive(),
 });
 export type PncpCursor = z.infer<typeof pncpCursor>;
+
+/** Cursor da partição de propostas abertas: sem `day`; `until` = `dataFinal` da consulta (fixo durante a varredura). */
+export const pncpProposalsCursor = z.object({
+  v: z.literal(1),
+  feed: z.literal('proposals'),
+  until: dia,
+  modalities: modalidades,
+  modalityIndex: z.number().int().nonnegative(),
+  page: z.number().int().positive(),
+  /** Varredura concluída: a próxima execução recomeça do início, com `until` renovado. */
+  done: z.boolean().optional(),
+});
+export type PncpProposalsCursor = z.infer<typeof pncpProposalsCursor>;
+
+const isObj = (x: unknown): x is Record<string, unknown> => typeof x === 'object' && x !== null && !Array.isArray(x);
+/** Lê `Source.lastCursor`: formato 2 (`feeds`) ou o antigo (cursor `updates` solto). */
+export function feedsOf(saved: unknown): { updates?: unknown; proposals?: unknown } {
+  if (!isObj(saved)) return {};
+  if (saved.v === 2 && isObj(saved.feeds)) return saved.feeds;
+  if (saved.v === 1 && 'day' in saved) return { updates: saved };
+  return {};
+}
 
 /** Data YYYY-MM-DD no fuso de negócio (America/Sao_Paulo). */
 export function diaBrasilia(d: Date): string {
@@ -48,6 +81,8 @@ export type PncpConnectorOptions = {
   since?: Date;
   /** Último dia (inclusive). Padrão: hoje (Brasília). */
   until?: Date;
+  /** Dias à frente para o `dataFinal` das propostas abertas. Padrão: `PNCP_PROPOSALS_HORIZON_DAYS` (180). */
+  proposalsHorizonDays?: number;
   now?: () => Date;
 };
 
@@ -83,14 +118,36 @@ export class PncpConnector implements SyncableConnector {
     };
   }
 
-  cursorFrom(since: Date | null): PncpCursor {
+  initialProposalsCursor(): PncpProposalsCursor {
+    const dias = this.options.proposalsHorizonDays ?? PROPOSALS_HORIZON_DAYS;
+    return {
+      v: 1,
+      feed: 'proposals',
+      until: diaBrasilia(new Date(this.now().getTime() + dias * 86_400_000)),
+      modalities: this.modalities,
+      modalityIndex: 0,
+      page: 1,
+    };
+  }
+
+  cursorFrom(since: Date | null, feed: SyncFeed = 'updates'): PncpCursor | PncpProposalsCursor {
+    if (feed === 'proposals') return this.initialProposalsCursor(); // propostas abertas não têm "desde"
     const c = this.initialCursor();
     return since ? { ...c, day: diaBrasilia(since) } : c;
   }
 
-  /** Cursor salvo: estende `until` até hoje e respeita mudança de modalidades na configuração. */
-  resumeCursor(saved: unknown): PncpCursor | null {
-    const parsed = pncpCursor.safeParse(saved);
+  /** Cursor salvo do feed: `updates` estende `until` até hoje; `proposals` retoma a varredura ou recomeça se concluída. */
+  resumeCursor(saved: unknown, feed: SyncFeed = 'updates'): PncpCursor | PncpProposalsCursor | null {
+    const bruto = feedsOf(saved)[feed];
+    if (feed === 'proposals') {
+      const parsed = pncpProposalsCursor.safeParse(bruto);
+      if (!parsed.success) return null;
+      const c = parsed.data;
+      // Concluída, ou modalidades mudaram na configuração: nova varredura do início.
+      if (c.done || JSON.stringify(c.modalities) !== JSON.stringify(this.modalities)) return this.initialProposalsCursor();
+      return c;
+    }
+    const parsed = pncpCursor.safeParse(bruto);
     if (!parsed.success) return null;
     const c = parsed.data;
     const hoje = diaBrasilia(this.now());
@@ -98,6 +155,15 @@ export class PncpConnector implements SyncableConnector {
       return { ...c, modalities: this.modalities, modalityIndex: 0, page: 1, until: hoje };
     }
     return { ...c, until: c.until < hoje ? hoje : c.until };
+  }
+
+  /** Grava o cursor do feed preservando o do outro feed (`Source.lastCursor` = `{ v: 2, feeds }`). */
+  storeCursor(current: unknown, feed: SyncFeed, cursor: unknown): unknown {
+    return { v: 2, feeds: { ...feedsOf(current), [feed]: cursor } };
+  }
+
+  completedCursor(cursor: unknown): unknown {
+    return isObj(cursor) && cursor.feed === 'proposals' ? { ...cursor, done: true } : cursor;
   }
 
   listingOf(payload: unknown): unknown {
@@ -109,18 +175,32 @@ export class PncpConnector implements SyncableConnector {
     return Array.isArray(p?.itens) && Array.isArray(p?.arquivos);
   }
 
-  private async consulta<T>(path: string): Promise<T> {
-    if (consultaBloqueada()) throw new AppError('PNCP_UNAVAILABLE', 'Consulta do PNCP em pausa pelo disjuntor.', { status: 503 });
+  /** GET ao PNCP: 429 nunca é retentado — abre o cooldown e sinaliza `SourceRateLimited`. */
+  private async get<T>(path: string, options: PncpFetchOptions): Promise<T> {
     try {
-      // Paginação de sincronização não usa cache: cada leitura precisa refletir a fonte.
-      return await pncpGet<T>(path, { ttlMs: 0, timeoutMs: 45_000, retries: 2 });
+      return await pncpGet<T>(path, options);
     } catch (error) {
-      if (!(error instanceof AppError && error.code === 'NOT_FOUND')) abrirDisjuntorConsulta();
+      if (isPncpRateLimited(error)) {
+        abrirDisjuntorConsulta(COOLDOWN_429_MS);
+        throw new SourceRateLimited('PNCP respondeu 429; parar e retomar após o cooldown.', COOLDOWN_429_MS);
+      }
       throw error;
     }
   }
 
-  async fetchPage(cursor: unknown | null): Promise<FetchPageResult & { nextCursor: PncpCursor | null; totalPages: number }> {
+  private async consulta<T>(path: string): Promise<T> {
+    if (consultaBloqueada()) throw new SourceRateLimited('Consulta do PNCP em cooldown (disjuntor).', Math.max(consultaBloqueadaAte() - Date.now(), 1_000));
+    try {
+      // Paginação de sincronização não usa cache: cada leitura precisa refletir a fonte.
+      return await this.get<T>(path, { ttlMs: 0, timeoutMs: 45_000, retries: 2 });
+    } catch (error) {
+      if (!(error instanceof SourceRateLimited) && !(error instanceof AppError && error.code === 'NOT_FOUND')) abrirDisjuntorConsulta();
+      throw error;
+    }
+  }
+
+  async fetchPage(cursor: unknown | null): Promise<FetchPageResult & { nextCursor: PncpCursor | PncpProposalsCursor | null; totalPages: number }> {
+    if (isObj(cursor) && cursor.feed === 'proposals') return this.fetchProposalsPage(pncpProposalsCursor.parse(cursor));
     const c = cursor === null ? this.initialCursor() : pncpCursor.parse(cursor);
     const modalidade = c.modalities[c.modalityIndex]!;
     const ymd = c.day.replace(/-/g, '');
@@ -132,14 +212,30 @@ export class PncpConnector implements SyncableConnector {
       tamanhoPagina: String(PAGE_SIZE),
     });
     const corpo = await this.consulta<RespostaConsulta | []>(`/consulta/v1/contratacoes/atualizacao?${params}`);
+    const { records, totalPages } = this.parse(corpo);
+    return { records, nextCursor: this.advance(c, totalPages), totalPages };
+  }
+
+  /** Propostas abertas: /consulta/v1/contratacoes/proposta?dataFinal=…, uma modalidade por vez. */
+  private async fetchProposalsPage(c: PncpProposalsCursor) {
+    const params = new URLSearchParams({
+      dataFinal: c.until.replace(/-/g, ''),
+      codigoModalidadeContratacao: String(c.modalities[c.modalityIndex]!),
+      pagina: String(c.page),
+      tamanhoPagina: String(PAGE_SIZE),
+    });
+    const corpo = await this.consulta<RespostaConsulta | []>(`/consulta/v1/contratacoes/proposta?${params}`);
+    const { records, totalPages } = this.parse(corpo);
+    return { records, nextCursor: this.advanceProposals(c, totalPages), totalPages };
+  }
+
+  private parse(corpo: RespostaConsulta | []) {
     const brutos = Array.isArray(corpo) ? [] : (corpo.data ?? []);
     const totalPages = Array.isArray(corpo) ? 0 : (corpo.totalPaginas ?? 0);
-
     const records = brutos
       .filter((r): r is { numeroControlePNCP: string } => typeof r.numeroControlePNCP === 'string')
       .map((compra) => ({ externalId: compra.numeroControlePNCP, payload: { compra } satisfies Partial<PncpPayload> as unknown }));
-
-    return { records, nextCursor: this.advance(c, totalPages), totalPages };
+    return { records, totalPages };
   }
 
   /** Próxima posição: página → modalidade → dia. `null` quando alcançou `until`. */
@@ -147,6 +243,13 @@ export class PncpConnector implements SyncableConnector {
     if (c.page < totalPages) return { ...c, page: c.page + 1 };
     if (c.modalityIndex + 1 < c.modalities.length) return { ...c, modalityIndex: c.modalityIndex + 1, page: 1 };
     if (c.day < c.until) return { ...c, day: proximoDia(c.day), modalityIndex: 0, page: 1 };
+    return null;
+  }
+
+  /** Propostas abertas: página → modalidade (em sequência). `null` ao terminar a última. */
+  advanceProposals(c: PncpProposalsCursor, totalPages: number): PncpProposalsCursor | null {
+    if (c.page < totalPages) return { ...c, page: c.page + 1 };
+    if (c.modalityIndex + 1 < c.modalities.length) return { ...c, modalityIndex: c.modalityIndex + 1, page: 1 };
     return null;
   }
 
@@ -158,11 +261,11 @@ export class PncpConnector implements SyncableConnector {
     const raiz = `/pncp/v1/orgaos/${p.cnpj}/compras/${p.ano}/${p.sequencial}`;
     const itens: unknown[] = [];
     for (let pagina = 1; pagina <= MAX_PAGINAS_ITENS; pagina += 1) {
-      const lote = await pncpGet<unknown[]>(`${raiz}/itens?pagina=${pagina}&tamanhoPagina=${ITENS_POR_PAGINA}`, { ttlMs: 10 * 60_000 });
+      const lote = await this.get<unknown[]>(`${raiz}/itens?pagina=${pagina}&tamanhoPagina=${ITENS_POR_PAGINA}`, { ttlMs: 10 * 60_000 });
       itens.push(...lote);
       if (lote.length < ITENS_POR_PAGINA) break;
     }
-    const arquivos = await pncpGet<unknown[]>(`${raiz}/arquivos`, { ttlMs: 10 * 60_000 });
+    const arquivos = await this.get<unknown[]>(`${raiz}/arquivos`, { ttlMs: 10 * 60_000 });
     return { ...base, itens, arquivos } as PncpPayload;
   }
 

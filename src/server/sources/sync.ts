@@ -8,7 +8,12 @@
  * - Falha de enriquecimento: o registro é gravado só com a listagem e o enriquecimento é retentado
  *   quando o registro for relido; após a 1ª falha, o enriquecimento pausa até a próxima execução.
  * - `incremental` avança `sources.last_cursor`; `backfill` (since ou ontem) relê sem mexer no cursor.
- * - Uma execução incremental por fonte (advisory lock).
+ * - Uma execução incremental por fonte e feed (advisory lock). Feeds (1.5.0, ADR-023): `updates` (padrão) e
+ *   `proposals`; cada um tem cursor próprio em `sources.last_cursor` (o conector monta o valor).
+ * - Orçamento de tempo por execução (`maxMs`, padrão 10 min): ao esgotar, para no cursor e o handler reenfileira
+ *   o mesmo payload (retomada, não retentativa).
+ * - HTTP 429 (`SourceRateLimited`) nunca é retentado: a execução termina `partial` (`rate_limited`) sem lançar
+ *   erro, o cursor fica onde estava e a retomada só ocorre depois do cooldown.
  */
 import { createHash } from 'node:crypto';
 import { and, desc, eq, sql } from 'drizzle-orm';
@@ -20,14 +25,15 @@ import { recordAudit } from '../audit';
 import * as s from '../db/schema';
 import { enqueueWith } from '../jobs/enqueue';
 import { log } from '../jobs/registry';
-import type { SyncableConnector } from './connector';
+import { SourceRateLimited, type SyncableConnector, type SyncFeed } from './connector';
 import { matchesAny, type ProfileFilter } from './filter';
 import { contentHashOf } from './pncp/normalize';
 
-export type SyncLimits = { maxPages: number; enrichBudget: number };
+export type SyncLimits = { maxPages: number; enrichBudget: number; maxMs: number };
 export const DEFAULT_SYNC_LIMITS: SyncLimits = {
   maxPages: Number(process.env.SOURCE_SYNC_MAX_PAGES ?? 200),
   enrichBudget: Number(process.env.SOURCE_SYNC_ENRICH_BUDGET ?? 50),
+  maxMs: Number(process.env.SOURCE_SYNC_MAX_MS ?? 10 * 60_000),
 };
 
 export type SyncDeps = {
@@ -47,7 +53,10 @@ export type SyncResult = {
   matched: number;
   enriched: number;
   enrichErrors: number;
-  stoppedBy: 'caught_up' | 'max_pages' | 'enrich_budget' | 'error' | null;
+  stoppedBy: 'caught_up' | 'max_pages' | 'enrich_budget' | 'time_budget' | 'rate_limited' | 'error' | null;
+  feed: SyncFeed;
+  /** Só com `rate_limited`: espera mínima antes de retomar. */
+  cooldownMs?: number;
 };
 
 const dbOf = (c: PoolClient | Pool) => drizzle(c, { schema: s, casing: 'snake_case' });
@@ -92,16 +101,35 @@ async function latestPayload(pool: Pool, sourceId: string, externalId: string): 
   return row ?? null;
 }
 
-function lockKey(sourceKey: string): bigint {
-  return createHash('sha256').update(`source.sync:${sourceKey}`).digest().readBigInt64BE(0);
+function lockKey(sourceKey: string, feed: SyncFeed): bigint {
+  // 'updates' mantém a chave histórica (sem sufixo): uma execução antiga em curso continua exclusiva.
+  const nome = feed === 'updates' ? `source.sync:${sourceKey}` : `source.sync:${sourceKey}:${feed}`;
+  return createHash('sha256').update(nome).digest().readBigInt64BE(0);
+}
+
+/** Pausa entre uma execução interrompida por orçamento e a continuação (segundos de folga, não é retentativa). */
+export const CONTINUATION_DELAY_MS = 30_000;
+
+/**
+ * Retomada da partição `proposals` (ADR-023): a varredura é longa (~8 a ~40 min) e cada execução tem orçamento de
+ * tempo; ao esgotá-lo o handler reenfileira o MESMO payload (`singletonKey` evita duplicata). Depois de um 429
+ * espera o cooldown inteiro. Outros feeds e o `backfill` não se reenfileiram (o cron cobre). `null` = não reenfileirar.
+ */
+export function continuationDelayMs(payload: JobPayload<'source.sync'>, result: SyncResult): number | null {
+  if (payload.feed !== 'proposals' || payload.mode !== 'incremental') return null;
+  if (result.stoppedBy === 'rate_limited') return Math.max(result.cooldownMs ?? 0, CONTINUATION_DELAY_MS);
+  if (result.stoppedBy === 'time_budget' || result.stoppedBy === 'max_pages' || result.stoppedBy === 'enrich_budget') return CONTINUATION_DELAY_MS;
+  return null;
 }
 
 export async function syncSource(deps: SyncDeps, payload: JobPayload<'source.sync'>): Promise<SyncResult> {
   const connector = deps.connectors.get(payload.sourceKey);
-  const result: SyncResult = { status: 'ok', pages: 0, records: 0, newRecords: 0, matched: 0, enriched: 0, enrichErrors: 0, stoppedBy: null };
+  const feed: SyncFeed = payload.feed ?? 'updates';
+  const result: SyncResult = { status: 'ok', feed, pages: 0, records: 0, newRecords: 0, matched: 0, enriched: 0, enrichErrors: 0, stoppedBy: null };
   if (!connector) return { ...result, status: 'skipped', reason: `conector desconhecido: ${payload.sourceKey}` };
   const limits = { ...DEFAULT_SYNC_LIMITS, ...deps.limits };
   const now = deps.now ?? (() => new Date());
+  const inicio = now().getTime();
 
   const source = await ensureSource(deps.pool, connector);
   if (!source.enabled) return { ...result, status: 'skipped', reason: 'fonte desabilitada' };
@@ -110,14 +138,14 @@ export async function syncSource(deps: SyncDeps, payload: JobPayload<'source.syn
   const lockClient = await deps.pool.connect();
   try {
     if (incremental) {
-      const { rows } = await lockClient.query<{ ok: boolean }>('select pg_try_advisory_lock($1) as ok', [lockKey(source.key).toString()]);
+      const { rows } = await lockClient.query<{ ok: boolean }>('select pg_try_advisory_lock($1) as ok', [lockKey(source.key, feed).toString()]);
       if (!rows[0]?.ok) return { ...result, status: 'skipped', reason: 'sincronização incremental já em execução' };
     }
 
     const since = payload.since ? new Date(payload.since) : null;
     let cursor: unknown = incremental
-      ? (source.lastCursor && !since ? connector.resumeCursor(source.lastCursor) : null) ?? connector.cursorFrom(since)
-      : connector.cursorFrom(since ?? new Date(now().getTime() - 86_400_000));
+      ? (source.lastCursor && !since ? connector.resumeCursor(source.lastCursor, feed) : null) ?? connector.cursorFrom(since, feed)
+      : connector.cursorFrom(since ?? new Date(now().getTime() - 86_400_000), feed);
 
     const profiles = await activeProfiles(deps.pool, source.key);
     let budget = limits.enrichBudget;
@@ -127,6 +155,10 @@ export async function syncSource(deps: SyncDeps, payload: JobPayload<'source.syn
       paginas: while (true) {
         if (result.pages >= limits.maxPages) {
           result.stoppedBy = 'max_pages';
+          break;
+        }
+        if (now().getTime() - inicio >= limits.maxMs) {
+          result.stoppedBy = 'time_budget';
           break;
         }
         const page = await connector.fetchPage(cursor);
@@ -163,6 +195,7 @@ export async function syncSource(deps: SyncDeps, payload: JobPayload<'source.syn
               budget -= 1;
               result.enriched += 1;
             } catch (error) {
+              if (error instanceof SourceRateLimited) throw error; // 429: parar tudo, sem retentar
               result.enrichErrors += 1;
               enrichPaused = true;
               log('warn', 'source.enrich_failed', { sourceKey: source.key, externalId: record.externalId, error: error instanceof Error ? error.message : String(error) });
@@ -193,10 +226,15 @@ export async function syncSource(deps: SyncDeps, payload: JobPayload<'source.syn
               await enqueueWith(deps.boss, 'source.normalize', { sourceRecordId: inserted[0].id }, { tx: client });
             }
           }
-          // Cursor: se a página foi interrompida ou é a última, fica nela (relida na próxima execução).
-          const proximo = parouNoMeio || page.nextCursor === null ? cursor : page.nextCursor;
+          // Cursor: se a página foi interrompida, fica nela (relida na próxima execução). Na última página, o conector
+          // pode marcar a varredura como concluída (`completedCursor`); sem isso, fica nela como antes.
+          const terminou = !parouNoMeio && page.nextCursor === null;
+          const proximo = parouNoMeio ? cursor : terminou ? (connector.completedCursor?.(cursor) ?? cursor) : page.nextCursor;
           if (incremental) {
-            await db.update(s.sources).set({ lastCursor: proximo, updatedAt: sql`now()` }).where(eq(s.sources.id, source.id));
+            // Trava a linha: dois feeds da mesma fonte gravam no mesmo `last_cursor` e não podem sobrescrever um ao outro.
+            const { rows } = await client.query<{ last_cursor: unknown }>('select last_cursor from sources where id = $1 for update', [source.id]);
+            const gravar = connector.storeCursor ? connector.storeCursor(rows[0]?.last_cursor ?? null, feed, proximo) : proximo;
+            await db.update(s.sources).set({ lastCursor: gravar, updatedAt: sql`now()` }).where(eq(s.sources.id, source.id));
           }
           await client.query('commit');
           cursor = proximo;
@@ -215,9 +253,17 @@ export async function syncSource(deps: SyncDeps, payload: JobPayload<'source.syn
       }
       result.status = result.stoppedBy === 'caught_up' && result.enrichErrors === 0 ? 'ok' : 'partial';
     } catch (error) {
-      result.status = result.pages > 1 ? 'partial' : 'error';
-      result.stoppedBy = 'error';
-      result.reason = error instanceof Error ? error.message : String(error);
+      if (error instanceof SourceRateLimited) {
+        // Limite da fonte: não é falha do job. O cursor já está salvo na última página gravada; retoma após o cooldown.
+        result.status = 'partial';
+        result.stoppedBy = 'rate_limited';
+        result.cooldownMs = error.cooldownMs;
+        result.reason = error.message;
+      } else {
+        result.status = result.pages > 1 ? 'partial' : 'error';
+        result.stoppedBy = 'error';
+        result.reason = error instanceof Error ? error.message : String(error);
+      }
     }
 
     await dbOf(deps.pool).transaction(async (tx) => {
@@ -238,7 +284,7 @@ export async function syncSource(deps: SyncDeps, payload: JobPayload<'source.syn
     if (result.status === 'error') throw new Error(`source.sync ${source.key}: ${result.reason}`);
     return result;
   } finally {
-    if (incremental) await lockClient.query('select pg_advisory_unlock($1)', [lockKey(source.key).toString()]).catch(() => {});
+    if (incremental) await lockClient.query('select pg_advisory_unlock($1)', [lockKey(source.key, feed).toString()]).catch(() => {});
     lockClient.release();
   }
 }
