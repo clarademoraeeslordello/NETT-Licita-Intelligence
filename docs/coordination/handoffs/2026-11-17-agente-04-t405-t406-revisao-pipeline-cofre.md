@@ -59,6 +59,24 @@ Os testes novos exercitam DTOs, handlers (401, 403, 400, 413, 422, 404 sem tocar
 2. Sem cursor de reviews no histórico (20 mais recentes). Sem teste de navegador. `proposalValue` volta com 4 casas do `numeric(18,4)`; a UI formata.
 3. A tela de pipeline envia `bidDecisionReviewId` do parecer mais recente ao entrar em etapa que exige parecer; o servidor revalida.
 
+## Decisões do 01 (2026-11-17) e confirmações
+- `/certificates` aprovadas (entram no §4 pela PR do 01). DTOs vão para `src/contracts/api/pipeline.ts` por PR do 01 depois do merge; os nomes exportados de `src/server/pipeline/dto.ts` não mudam. Sem DELETE de certidão nesta versão; se for preciso esconder, proponho um estado de arquivamento em handoff próprio. Listagem sem cursor aceita até a T-404.
+- **Leitura direta de `ai_analyses` (confirmado):** está isolada em UMA função, `carregarRevisao` em `src/app/(plataforma)/revisao/[id]/dados.ts`. Ela filtra por empresa (`companyId` nulo ou igual ao da empresa ativa; qualquer outra → `null` → 404). O cabeçalho do arquivo aponta a T-303 para a troca. Nenhum outro ponto lê `ai_analyses` por id, exceto a consulta de "análise mais recente" em `listTrackings` (`service.ts`), também filtrada por empresa.
+- Integração (`pipeline.integration.ts`) será rodada pelo Agente 03; as telas no navegador seguem não verificadas.
+
+## Mapa de rotas consumidas por tela
+| Tela | Rota | Uso |
+| --- | --- | --- |
+| `/pipeline` | `GET /api/v1/companies/{cid}/pipeline` | listar cards |
+| `/pipeline` | `POST …/pipeline` | adicionar oportunidade |
+| `/pipeline` | `PATCH …/pipeline/{id}` | etapa, proposta, resultado, notas, descarte |
+| `/pipeline` | `GET /api/v1/opportunities?q=&limit=10` | buscar para adicionar (T-204) |
+| `/pipeline` e `/revisao/{id}` | `POST …/reviews` (`bid_decision`) | decisão de participar (T-304) |
+| `/revisao/{id}` | `POST …/reviews` (`ai_analysis`) | parecer da análise (T-304) |
+| `/revisao/{id}` | leitura no servidor (sem rota) | `carregarRevisao`, temporário até a T-303 |
+| `/documentos` | `GET/POST …/certificates` | listar e criar certidão |
+| `/documentos` | `PATCH …/certificates/{id}` | editar e "Renovei" |
+
 ## Próximo passo esperado
 - Agente 01: revisar, rodar `test:pipeline:integration` e a navegação com banco/Keycloak, decidir os pedidos 1–3 e mesclar.
 - Agente 04: T-404 após a T-217; T-407 depois de T-406 e T-304 mescladas.
