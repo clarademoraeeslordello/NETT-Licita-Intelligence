@@ -32,7 +32,8 @@ const GRUPOS: Array<{ titulo: string; itens: ItemNav[] }> = [
     itens: [
       { href: '/', label: 'Painel', icon: IconHome },
       { href: '/radar', label: 'Radar de editais', icon: IconRadar },
-      { href: '/pipeline', label: 'Pipeline', icon: IconKanban, badge: 'pipeline' },
+      // Sem selos de contagem: os números vinham do localStorage; voltam quando o Painel migrar para /api/v1 (T-404).
+      { href: '/pipeline', label: 'Pipeline', icon: IconKanban },
       { href: '/agenda', label: 'Agenda', icon: IconCalendar },
     ],
   },
@@ -46,7 +47,7 @@ const GRUPOS: Array<{ titulo: string; itens: ItemNav[] }> = [
   {
     titulo: 'Empresa',
     itens: [
-      { href: '/documentos', label: 'Documentos', icon: IconFolder, badge: 'documentos' },
+      { href: '/documentos', label: 'Documentos', icon: IconFolder },
       { href: '/perfil', label: 'Perfil e filtros', icon: IconUser },
     ],
   },
