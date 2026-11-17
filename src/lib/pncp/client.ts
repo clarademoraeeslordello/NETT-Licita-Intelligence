@@ -60,7 +60,7 @@ function remember(key: string, value: unknown, ttlMs: number): void {
  * Padrão 0 (comportamento herdado); o worker de sincronização define `PNCP_MIN_INTERVAL_MS`.
  */
 const espacamento = globalThis as unknown as { __pncpProximoInicio?: number };
-async function aguardarVez(): Promise<void> {
+export async function aguardarVez(): Promise<void> {
   const intervalo = Number(process.env.PNCP_MIN_INTERVAL_MS ?? 0);
   if (!(intervalo > 0)) return;
   const agora = Date.now();

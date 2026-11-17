@@ -8,6 +8,8 @@ import { JOB_DEFAULTS } from '@/contracts/jobs';
 import type { SyncableConnector } from '../sources/connector';
 import { markNormalizationError, normalizeSourceRecord } from '../sources/normalize-record';
 import { PncpConnector } from '../sources/pncp/connector';
+import { fetchDocument } from '../sources/documents/fetch';
+import { getStorage, type ObjectStorage } from '../storage';
 import { continuationDelayMs, syncSource, type SyncLimits } from '../sources/sync';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { schema } from '../db';
@@ -20,6 +22,8 @@ export type HandlerDeps = {
   boss: PgBoss;
   connectors?: ReadonlyMap<string, SyncableConnector>;
   limits?: Partial<SyncLimits>;
+  /** Padrão: S3 configurado por ambiente (criado só quando o primeiro `document.fetch` roda). */
+  storage?: ObjectStorage;
 };
 
 export function defaultConnectors(): ReadonlyMap<string, SyncableConnector> {
@@ -48,6 +52,10 @@ export function buildRegistry(deps: HandlerDeps): JobRegistry {
         if (ctx.retryCount >= JOB_DEFAULTS.retryLimit) await markNormalizationError(deps.pool, sourceRecordId, error instanceof Error ? error.message : String(error));
         throw error;
       }
+    })
+    // T-203: baixa o arquivo do documento público (sem SSRF, com limites) e enfileira document.extract (agente 03).
+    .register('document.fetch', async ({ documentId }) => {
+      await fetchDocument({ pool: deps.pool, boss: deps.boss, storage: deps.storage ?? getStorage() }, documentId);
     })
     // Agente 03 (T-305): uma nota por SearchProfile ativo; idempotente (mesmo hash/versão/perfil → não regrava).
     .register('match.score', async (payload) => {
